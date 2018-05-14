@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/ansible-semaphore/semaphore/db"
+	"github.com/ansible-semaphore/semaphore/router"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
-	"github.com/ansible-semaphore/semaphore/router"
 )
 
 func GetKeysMiddleware() func(w http.ResponseWriter, r *http.Request) {
@@ -18,7 +18,7 @@ func GetKeysMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := router.ProjectQueryGetter("access_key")
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    contextKey,
 		ID:            "accessKey",
 		QueryFunc:     query,
@@ -49,48 +49,77 @@ func GetKeysMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //	context.Set(r, "accessKey", key)
 //}
 
-// GetKeys retrieves sorted keys from the database
-func GetKeys(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	var keys []db.AccessKey
+func KeysGetRequestHandler() func(w http.ResponseWriter, r *http.Request) {
+	return router.GetRequestHandler(&router.GetRequestOptions{
+		ContextKey: "project",
+		GetObjectFunc: func() interface{} {
+			return make([]db.AccessKey, 0)
+		},
+		GetQuery: func(context interface{}, options *router.GetRequestOptions, opts ...interface{}) (string, []interface{}, error) {
+			project := context.(db.Project)
+			q := squirrel.Select("ak.id",
+				"ak.name",
+				"ak.type",
+				"ak.project_id",
+				"ak.key",
+				"ak.removed").
+				From("access_key ak")
 
-	sort := r.URL.Query().Get("sort")
-	order := r.URL.Query().Get("order")
-
-	if order != "asc" && order != "desc" {
-		order = "asc"
-	}
-
-	q := squirrel.Select("ak.id",
-		"ak.name",
-		"ak.type",
-		"ak.project_id",
-		"ak.key",
-		"ak.removed").
-		From("access_key ak")
-
-	if t := r.URL.Query().Get("type"); len(t) > 0 {
-		q = q.Where("type=?", t)
-	}
-
-	switch sort {
-	case "name", "type":
-		q = q.Where("ak.project_id=?", project.ID).
-			OrderBy("ak." + sort + " " + order)
-	default:
-		q = q.Where("ak.project_id=?", project.ID).
-			OrderBy("ak.name " + order)
-	}
-
-	query, args, err := q.ToSql()
-	util.LogWarning(err)
-
-	if _, err := db.Mysql.Select(&keys, query, args...); err != nil {
-		panic(err)
-	}
-
-	mulekick.WriteJSON(w, http.StatusOK, keys)
+			if util.StringInSlice(options.Sort, []string{"name", "type"}) {
+				q = q.Where("pe.project_id=?", project.ID).
+					OrderBy("pe." + options.Sort + " " + options.Order)
+			} else {
+				q = q.Where("pe.project_id=?", project.ID).
+					OrderBy("pe.name " + options.Order)
+			}
+			return q.ToSql()
+		},
+	},
+	)
 }
+
+// GetKeys retrieves sorted keys from the database
+//func GetKeys(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	var keys []db.AccessKey
+//
+//	sort := r.URL.Query().Get("sort")
+//	order := r.URL.Query().Get("order")
+//
+//	if order != "asc" && order != "desc" {
+//		order = "asc"
+//	}
+//
+//	q := squirrel.Select("ak.id",
+//		"ak.name",
+//		"ak.type",
+//		"ak.project_id",
+//		"ak.key",
+//		"ak.removed").
+//		From("access_key ak")
+//
+//	if t := r.URL.Query().Get("type"); len(t) > 0 {
+//		q = q.Where("type=?", t)
+//	}
+//
+//	switch sort {
+//	case "name", "type":
+//		q = q.Where("ak.project_id=?", project.ID).
+//			OrderBy("ak." + sort + " " + order)
+//	default:
+//		q = q.Where("ak.project_id=?", project.ID).
+//			OrderBy("ak.name " + order)
+//	}
+//
+//	query, args, err := q.ToSql()
+//	util.LogWarning(err)
+//
+//	if _, err := db.Mysql.Select(&keys, query, args...); err != nil {
+//		panic(err)
+//	}
+//
+//	mulekick.WriteJSON(w, http.StatusOK, keys)
+//}
 
 // AddKey adds a new key to the database
 func AddKey(w http.ResponseWriter, r *http.Request) {

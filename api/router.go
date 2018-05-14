@@ -85,7 +85,7 @@ func Route() mulekick.Router {
 		api.Delete("/users/{user_id}/admin", projects.MustBeAdmin, projects.GetUsersMiddleware(), projects.MakeUserAdmin)
 		api.Delete("/users/{user_id}", projects.MustBeAdmin, projects.GetUsersMiddleware(), projects.RemoveUser)
 
-		api.Get("/keys", projects.GetKeys)
+		api.Get("/keys", projects.KeysGetRequestHandler())
 		api.Post("/keys", projects.AddKey)
 		api.Put("/keys/{key_id}", projects.GetKeysMiddleware(), projects.UpdateKey)
 		api.Delete("/keys/{key_id}", projects.GetKeysMiddleware(), projects.RemoveKey)
@@ -95,12 +95,12 @@ func Route() mulekick.Router {
 		api.Put("/repositories/{repository_id}", projects.GetRepositoryMiddleware(), projects.UpdateRepository)
 		api.Delete("/repositories/{repository_id}", projects.GetRepositoryMiddleware(), projects.RemoveRepository)
 
-		api.Get("/inventory", projects.GetInventory)
+		api.Get("/inventory", projects.InventoryGetRequestHandler())
 		api.Post("/inventory", projects.AddInventory)
 		api.Put("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.UpdateInventory)
 		api.Delete("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.RemoveInventory)
 
-		api.Get("/environment", projects.GetEnvironment)
+		api.Get("/environment", projects.EnvironmentGetRequestHandler())
 		api.Post("/environment", projects.AddEnvironment)
 		api.Put("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.UpdateEnvironment)
 		api.Delete("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.RemoveEnvironment)

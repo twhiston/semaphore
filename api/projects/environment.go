@@ -8,7 +8,6 @@ import (
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
-	"github.com/masterminds/squirrel"
 	"github.com/ansible-semaphore/semaphore/router"
 )
 
@@ -19,7 +18,7 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := router.ProjectQueryGetter("project__"+identifier)
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    contextKey,
 		ID:            identifier,
 		QueryFunc:     query,
@@ -57,40 +56,50 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //	context.Set(r, "environment", env)
 //}
 
-// GetEnvironment retrieves sorted environments from the database
-func GetEnvironment(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	var env []db.Environment
-
-	sort := r.URL.Query().Get("sort")
-	order := r.URL.Query().Get("order")
-
-	if order != "asc" && order != "desc" {
-		order = "asc"
-	}
-
-	q := squirrel.Select("*").
-		From("project__environment pe").
-		Where("project_id=?", project.ID)
-
-	switch sort {
-	case "name":
-		q = q.Where("pe.project_id=?", project.ID).
-			OrderBy("pe." + sort + " " + order)
-	default:
-		q = q.Where("pe.project_id=?", project.ID).
-			OrderBy("pe.name " + order)
-	}
-
-	query, args, err := q.ToSql()
-	util.LogWarning(err)
-
-	if _, err := db.Mysql.Select(&env, query, args...); err != nil {
-		panic(err)
-	}
-
-	mulekick.WriteJSON(w, http.StatusOK, env)
+func EnvironmentGetRequestHandler() func(w http.ResponseWriter, r *http.Request) {
+	return router.GetRequestHandler(&router.GetRequestOptions{
+		ContextKey: "project",
+		GetObjectFunc: func() interface{} {
+			return make([]db.Environment,0)
+		},
+		GetQuery: router.ProjectGetQueryGetter("environment", []string{"name"}),
+		},
+	)
 }
+//// GetEnvironment retrieves sorted environments from the database
+//func GetEnvironment(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	var env []db.Environment
+//
+//	sort := r.URL.Query().Get("sort")
+//	order := r.URL.Query().Get("order")
+//
+//	if order != "asc" && order != "desc" {
+//		order = "asc"
+//	}
+//
+//	q := squirrel.Select("*").
+//		From("project__environment pe").
+//		Where("project_id=?", project.ID)
+//
+//	switch sort {
+//	case "name":
+//		q = q.Where("pe.project_id=?", project.ID).
+//			OrderBy("pe." + sort + " " + order)
+//	default:
+//		q = q.Where("pe.project_id=?", project.ID).
+//			OrderBy("pe.name " + order)
+//	}
+//
+//	query, args, err := q.ToSql()
+//	util.LogWarning(err)
+//
+//	if _, err := db.Mysql.Select(&env, query, args...); err != nil {
+//		panic(err)
+//	}
+//
+//	mulekick.WriteJSON(w, http.StatusOK, env)
+//}
 
 // UpdateEnvironment updates an existing environment in the database
 func UpdateEnvironment(w http.ResponseWriter, r *http.Request) {

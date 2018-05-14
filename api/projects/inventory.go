@@ -7,7 +7,6 @@ import (
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
-	"github.com/masterminds/squirrel"
 	"path/filepath"
 	"strings"
 	"os"
@@ -26,7 +25,7 @@ func GetInventoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := router.ProjectQueryGetter("project__"+identifier)
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    contextKey,
 		ID:            identifier,
 		QueryFunc:     query,
@@ -64,39 +63,50 @@ func GetInventoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //	context.Set(r, "inventory", inventory)
 //}
 
-// GetInventory returns an inventory from the database
-func GetInventory(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	var inv []db.Inventory
-
-	sort := r.URL.Query().Get("sort")
-	order := r.URL.Query().Get("order")
-
-	if order != asc && order != desc {
-		order = asc
-	}
-
-	q := squirrel.Select("*").
-			From("project__inventory pi")
-
-	switch sort {
-	case "name", "type":
-		q = q.Where("pi.project_id=?", project.ID).
-			OrderBy("pi." + sort + " " + order)
-	default:
-		q = q.Where("pi.project_id=?", project.ID).
-		OrderBy("pi.name " + order)
-	}
-
-	query, args, err := q.ToSql()
-	util.LogWarning(err)
-
-	if _, err := db.Mysql.Select(&inv, query, args...); err != nil {
-		panic(err)
-	}
-
-	mulekick.WriteJSON(w, http.StatusOK, inv)
+func InventoryGetRequestHandler() func(w http.ResponseWriter, r *http.Request) {
+	return router.GetRequestHandler(&router.GetRequestOptions{
+		ContextKey: "project",
+		GetObjectFunc: func() interface{} {
+			return make([]db.Environment,0)
+		},
+		GetQuery: router.ProjectGetQueryGetter("inventory",[]string{"name", "type"}),
+	},
+	)
 }
+
+// GetInventory returns an inventory from the database
+//func GetInventory(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	var inv []db.Inventory
+//
+//	sort := r.URL.Query().Get("sort")
+//	order := r.URL.Query().Get("order")
+//
+//	if order != asc && order != desc {
+//		order = asc
+//	}
+//
+//	q := squirrel.Select("*").
+//			From("project__inventory pi")
+//
+//	switch sort {
+//	case "name", "type":
+//		q = q.Where("pi.project_id=?", project.ID).
+//			OrderBy("pi." + sort + " " + order)
+//	default:
+//		q = q.Where("pi.project_id=?", project.ID).
+//		OrderBy("pi.name " + order)
+//	}
+//
+//	query, args, err := q.ToSql()
+//	util.LogWarning(err)
+//
+//	if _, err := db.Mysql.Select(&inv, query, args...); err != nil {
+//		panic(err)
+//	}
+//
+//	mulekick.WriteJSON(w, http.StatusOK, inv)
+//}
 
 // AddInventory creates an inventory in the database
 func AddInventory(w http.ResponseWriter, r *http.Request) {

@@ -26,7 +26,7 @@ func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
 			ToSql()
 	}
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    contextKey,
 		ID:            identifier,
 		QueryFunc:     query,

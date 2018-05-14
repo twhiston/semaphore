@@ -30,7 +30,7 @@ func GetRepositoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := router.ProjectQueryGetter("project__"+identifier)
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    contextKey,
 		ID:            identifier,
 		QueryFunc:     query,

@@ -19,7 +19,7 @@ type MiddlewareOptions struct {
 	PostRequestFunc func(w http.ResponseWriter, r *http.Request)
 }
 
-func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *http.Request) {
+func GetMiddleware(options *MiddlewareOptions) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Get(r, options.ContextKey)
@@ -37,7 +37,7 @@ func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *htt
 		if err := db.Mysql.SelectOne(&data, query, args...); err != nil {
 			//Only log if the error is unexpected, but always return not found
 			if err != sql.ErrNoRows {
-				util.LogErrorWithFields(err, logrus.Fields{"data": data, "query": query, "args": args})
+				util.LogErrorWithFields(err, logrus.Fields{"context": ctx, "params": params, "query": query, "args": args, "data": data})
 			}
 			w.WriteHeader(http.StatusNotFound)
 			return

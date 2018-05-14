@@ -24,7 +24,7 @@ func GetTaskMiddleware() func(w http.ResponseWriter, r *http.Request) {
 			ToSql()
 	}
 
-	return router.GetMiddleware(router.MiddlewareOptions{
+	return router.GetMiddleware(&router.MiddlewareOptions{
 		ContextKey:    "",
 		ID:            identifier,
 		QueryFunc:     query,
