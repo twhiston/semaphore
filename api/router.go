@@ -97,13 +97,13 @@ func Route() mulekick.Router {
 
 		api.Get("/inventory", projects.GetInventory)
 		api.Post("/inventory", projects.AddInventory)
-		api.Put("/inventory/{inventory_id}", projects.InventoryMiddleware, projects.UpdateInventory)
-		api.Delete("/inventory/{inventory_id}", projects.InventoryMiddleware, projects.RemoveInventory)
+		api.Put("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.UpdateInventory)
+		api.Delete("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.RemoveInventory)
 
 		api.Get("/environment", projects.GetEnvironment)
 		api.Post("/environment", projects.AddEnvironment)
-		api.Put("/environment/{environment_id}", projects.EnvironmentMiddleware, projects.UpdateEnvironment)
-		api.Delete("/environment/{environment_id}", projects.EnvironmentMiddleware, projects.RemoveEnvironment)
+		api.Put("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.UpdateEnvironment)
+		api.Delete("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.RemoveEnvironment)
 
 		api.Get("/templates", projects.GetTemplates)
 		api.Post("/templates", projects.AddTemplate)

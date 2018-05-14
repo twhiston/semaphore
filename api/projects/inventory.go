@@ -19,33 +19,50 @@ const (
 	desc = "desc"
 )
 
-// InventoryMiddleware ensures an inventory exists and loads it to the context
-func InventoryMiddleware(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	inventoryID, err := util.GetIntParam("inventory_id", w, r)
-	if err != nil {
-		return
-	}
+func GetInventoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	contextKey := "project"
+	identifier := "inventory"
 
-	query, args, err := squirrel.Select("*").
-		From("project__inventory").
-		Where("project_id=?", project.ID).
-		Where("id=?", inventoryID).
-		ToSql()
-	util.LogWarning(err)
+	paramGetter := SimpleParamGetter(identifier)
+	query := ProjectQueryGetter(identifier)
 
-	var inventory db.Inventory
-	if err := db.Mysql.SelectOne(&inventory, query, args...); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		panic(err)
-	}
-
-	context.Set(r, "inventory", inventory)
+	return GetMiddleware(MiddlewareOptions{
+		contextKey:    contextKey,
+		ID:            identifier,
+		queryFunc:     query,
+		paramGetFunc:  paramGetter,
+		getObjectFunc: func() interface{} { return new(db.Inventory) },
+	},
+	)
 }
+
+// InventoryMiddleware ensures an inventory exists and loads it to the context
+//func InventoryMiddleware(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	inventoryID, err := util.GetIntParam("inventory_id", w, r)
+//	if err != nil {
+//		return
+//	}
+//
+//	query, args, err := squirrel.Select("*").
+//		From("project__inventory").
+//		Where("project_id=?", project.ID).
+//		Where("id=?", inventoryID).
+//		ToSql()
+//	util.LogWarning(err)
+//
+//	var inventory db.Inventory
+//	if err := db.Mysql.SelectOne(&inventory, query, args...); err != nil {
+//		if err == sql.ErrNoRows {
+//			w.WriteHeader(http.StatusNotFound)
+//			return
+//		}
+//
+//		panic(err)
+//	}
+//
+//	context.Set(r, "inventory", inventory)
+//}
 
 // GetInventory returns an inventory from the database
 func GetInventory(w http.ResponseWriter, r *http.Request) {

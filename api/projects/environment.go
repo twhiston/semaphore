@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -12,33 +11,50 @@ import (
 	"github.com/masterminds/squirrel"
 )
 
-// EnvironmentMiddleware ensures an environment exists and loads it to the context
-func EnvironmentMiddleware(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	envID, err := util.GetIntParam("environment_id", w, r)
-	if err != nil {
-		return
-	}
+func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	contextKey := "project"
+	identifier := "environment"
 
-	query, args, err := squirrel.Select("*").
-		From("project__environment").
-		Where("project_id=?", project.ID).
-		Where("id=?", envID).
-		ToSql()
-	util.LogWarning(err)
+	paramGetter := SimpleParamGetter(identifier)
+	query := ProjectQueryGetter(identifier)
 
-	var env db.Environment
-	if err := db.Mysql.SelectOne(&env, query, args...); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		panic(err)
-	}
-
-	context.Set(r, "environment", env)
+	return GetMiddleware(MiddlewareOptions{
+		contextKey:    contextKey,
+		ID:            identifier,
+		queryFunc:     query,
+		paramGetFunc:  paramGetter,
+		getObjectFunc: func() interface{} { return new(db.Environment) },
+	},
+	)
 }
+
+// EnvironmentMiddleware ensures an environment exists and loads it to the context
+//func EnvironmentMiddleware(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	envID, err := util.GetIntParam("environment_id", w, r)
+//	if err != nil {
+//		return
+//	}
+//
+//	query, args, err := squirrel.Select("*").
+//		From("project__environment").
+//		Where("project_id=?", project.ID).
+//		Where("id=?", envID).
+//		ToSql()
+//	util.LogWarning(err)
+//
+//	var env db.Environment
+//	if err := db.Mysql.SelectOne(&env, query, args...); err != nil {
+//		if err == sql.ErrNoRows {
+//			w.WriteHeader(http.StatusNotFound)
+//			return
+//		}
+//
+//		panic(err)
+//	}
+//
+//	context.Set(r, "environment", env)
+//}
 
 // GetEnvironment retrieves sorted environments from the database
 func GetEnvironment(w http.ResponseWriter, r *http.Request) {
