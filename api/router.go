@@ -113,9 +113,9 @@ func Route() mulekick.Router {
 		api.Get("/tasks", tasks.GetAllTasks)
 		api.Get("/tasks/last", tasks.GetLastTasks)
 		api.Post("/tasks", tasks.AddTask)
-		api.Get("/tasks/{task_id}/output", tasks.GetTaskMiddleware, tasks.GetTaskOutput)
-		api.Get("/tasks/{task_id}", tasks.GetTaskMiddleware, tasks.GetTask)
-		api.Delete("/tasks/{task_id}", tasks.GetTaskMiddleware, tasks.RemoveTask)
+		api.Get("/tasks/{task_id}/output", tasks.GetTaskMiddleware(), tasks.GetTaskOutput)
+		api.Get("/tasks/{task_id}", tasks.GetTaskMiddleware(), tasks.GetTask)
+		api.Delete("/tasks/{task_id}", tasks.GetTaskMiddleware(), tasks.RemoveTask)
 	}(api.Group("/project/{project_id}"))
 
 	return r

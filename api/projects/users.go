@@ -8,13 +8,14 @@ import (
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
+	"github.com/ansible-semaphore/semaphore/router"
 )
 
 func GetUsersMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	contextKey := "project"
 	identifier := "user"
 
-	paramGetter := SimpleParamGetter(identifier)
+	paramGetter := router.SimpleParamGetter(identifier)
 	query := func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
 		project := context.(db.Project)
 		return squirrel.Select("u.*").
@@ -25,12 +26,12 @@ func GetUsersMiddleware() func(w http.ResponseWriter, r *http.Request) {
 			ToSql()
 	}
 
-	return GetMiddleware(MiddlewareOptions{
-		contextKey:    contextKey,
+	return router.GetMiddleware(router.MiddlewareOptions{
+		ContextKey:    contextKey,
 		ID:            "projectUser",
-		queryFunc:     query,
-		paramGetFunc:  paramGetter,
-		getObjectFunc: func() interface{} { return new(db.Environment) },
+		QueryFunc:     query,
+		ParamGetFunc:  paramGetter,
+		GetObjectFunc: func() interface{} { return new(db.Environment) },
 	},
 	)
 }

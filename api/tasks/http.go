@@ -7,11 +7,47 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ansible-semaphore/semaphore/db"
-	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
+	"github.com/ansible-semaphore/semaphore/router"
 )
+
+func GetTaskMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	identifier := taskTypeID
+
+	paramGetter := router.SimpleParamGetter(identifier)
+	query := func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
+		return squirrel.Select("*").
+			From("task").
+			Where("id=?", params[taskTypeID]).
+			ToSql()
+	}
+
+	return router.GetMiddleware(router.MiddlewareOptions{
+		ContextKey:    "",
+		ID:            identifier,
+		QueryFunc:     query,
+		ParamGetFunc:  paramGetter,
+		GetObjectFunc: func() interface{} { return new(db.Environment) },
+	},
+	)
+}
+// TaskMiddleware is middleware that gets a task by id and sets the context to it or panics
+//func TaskMiddleware(w http.ResponseWriter, r *http.Request) {
+//	taskID, err := util.GetIntParam("task_id", w, r)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	var task db.Task
+//	if err := db.Mysql.SelectOne(&task, "select * from task where id=?", taskID); err != nil {
+//		panic(err)
+//	}
+//
+//	context.Set(r, taskTypeID, task)
+//}
+
 
 // AddTask inserts a task into the database and returns a header or panics
 func AddTask(w http.ResponseWriter, r *http.Request) {
@@ -95,21 +131,6 @@ func GetLastTasks(w http.ResponseWriter, r *http.Request) {
 func GetTask(w http.ResponseWriter, r *http.Request) {
 	task := context.Get(r, taskTypeID).(db.Task)
 	mulekick.WriteJSON(w, http.StatusOK, task)
-}
-
-// GetTaskMiddleware is middleware that gets a task by id and sets the context to it or panics
-func GetTaskMiddleware(w http.ResponseWriter, r *http.Request) {
-	taskID, err := util.GetIntParam("task_id", w, r)
-	if err != nil {
-		panic(err)
-	}
-
-	var task db.Task
-	if err := db.Mysql.SelectOne(&task, "select * from task where id=?", taskID); err != nil {
-		panic(err)
-	}
-
-	context.Set(r, taskTypeID, task)
 }
 
 // GetTaskOutput returns the logged task output by id and writes it as json

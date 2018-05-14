@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"os"
+	"github.com/ansible-semaphore/semaphore/router"
 )
 
 const (
@@ -22,15 +23,15 @@ func GetInventoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	contextKey := "project"
 	identifier := "inventory"
 
-	paramGetter := SimpleParamGetter(identifier)
-	query := ProjectQueryGetter("project__"+identifier)
+	paramGetter := router.SimpleParamGetter(identifier)
+	query := router.ProjectQueryGetter("project__"+identifier)
 
-	return GetMiddleware(MiddlewareOptions{
-		contextKey:    contextKey,
+	return router.GetMiddleware(router.MiddlewareOptions{
+		ContextKey:    contextKey,
 		ID:            identifier,
-		queryFunc:     query,
-		paramGetFunc:  paramGetter,
-		getObjectFunc: func() interface{} { return new(db.Inventory) },
+		QueryFunc:     query,
+		ParamGetFunc:  paramGetter,
+		GetObjectFunc: func() interface{} { return new(db.Inventory) },
 	},
 	)
 }

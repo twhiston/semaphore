@@ -1,4 +1,4 @@
-package projects
+package router
 
 import (
 	"database/sql"
@@ -11,28 +11,29 @@ import (
 )
 
 type MiddlewareOptions struct {
-	contextKey    string
-	ID            string
-	queryFunc     func(ctx interface{}, params map[string]interface{}) (string, []interface{}, error)
-	paramGetFunc  func(context interface{}, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error)
-	getObjectFunc func() interface{}
+	ContextKey string
+	ID         string
+	QueryFunc func(ctx interface{}, params map[string]interface{}) (string, []interface{}, error)
+	ParamGetFunc func(context interface{}, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error)
+	GetObjectFunc func() interface{}
+	PostRequestFunc func(w http.ResponseWriter, r *http.Request)
 }
 
 func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Get(r, options.contextKey)
-		params, err := options.paramGetFunc(ctx, w, r)
+		ctx := context.Get(r, options.ContextKey)
+		params, err := options.ParamGetFunc(ctx, w, r)
 		if err != nil {
 			util.LogErrorWithFields(err, logrus.Fields{"context": ctx, "params": params})
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		query, args, err := options.queryFunc(ctx, params)
+		query, args, err := options.QueryFunc(ctx, params)
 		util.LogWarningWithFields(err, logrus.Fields{"context": ctx, "params": params, "query": query, "args": args})
 
-		data := options.getObjectFunc()
+		data := options.GetObjectFunc()
 		if err := db.Mysql.SelectOne(&data, query, args...); err != nil {
 			//Only log if the error is unexpected, but always return not found
 			if err != sql.ErrNoRows {
@@ -42,6 +43,7 @@ func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *htt
 			return
 		}
 
+		options.PostRequestFunc(w, r)
 		context.Set(r, options.ID, data)
 	}
 }

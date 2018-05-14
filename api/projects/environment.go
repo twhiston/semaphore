@@ -9,21 +9,22 @@ import (
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
+	"github.com/ansible-semaphore/semaphore/router"
 )
 
 func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	contextKey := "project"
 	identifier := "environment"
 
-	paramGetter := SimpleParamGetter(identifier)
-	query := ProjectQueryGetter("project__"+identifier)
+	paramGetter := router.SimpleParamGetter(identifier)
+	query := router.ProjectQueryGetter("project__"+identifier)
 
-	return GetMiddleware(MiddlewareOptions{
-		contextKey:    contextKey,
+	return router.GetMiddleware(router.MiddlewareOptions{
+		ContextKey:    contextKey,
 		ID:            identifier,
-		queryFunc:     query,
-		paramGetFunc:  paramGetter,
-		getObjectFunc: func() interface{} { return new(db.Environment) },
+		QueryFunc:     query,
+		ParamGetFunc:  paramGetter,
+		GetObjectFunc: func() interface{} { return new(db.Environment) },
 	},
 	)
 }

@@ -8,21 +8,22 @@ import (
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
+	"github.com/ansible-semaphore/semaphore/router"
 )
 
 func GetKeysMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	contextKey := "project"
 	identifier := "key"
 
-	paramGetter := SimpleParamGetter(identifier)
-	query := ProjectQueryGetter("access_key")
+	paramGetter := router.SimpleParamGetter(identifier)
+	query := router.ProjectQueryGetter("access_key")
 
-	return GetMiddleware(MiddlewareOptions{
-		contextKey:    contextKey,
+	return router.GetMiddleware(router.MiddlewareOptions{
+		ContextKey:    contextKey,
 		ID:            "accessKey",
-		queryFunc:     query,
-		paramGetFunc:  paramGetter,
-		getObjectFunc: func() interface{} { return new(db.Environment) },
+		QueryFunc:     query,
+		ParamGetFunc:  paramGetter,
+		GetObjectFunc: func() interface{} { return new(db.Environment) },
 	},
 	)
 }

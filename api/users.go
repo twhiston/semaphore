@@ -13,6 +13,33 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//TODO - does not fit generic middleware pattern
+func getUserMiddleware(w http.ResponseWriter, r *http.Request) {
+	userID, err := util.GetIntParam("user_id", w, r)
+	if err != nil {
+		return
+	}
+
+	var user db.User
+	if err := db.Mysql.SelectOne(&user, "select * from user where id=?", userID); err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		panic(err)
+	}
+
+	editor := context.Get(r, "user").(*db.User)
+	if !editor.Admin && editor.ID != user.ID {
+		log.Warn(editor.Username + " is not permitted to edit users")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	context.Set(r, "_user", user)
+}
+
 func getUsers(w http.ResponseWriter, r *http.Request) {
 	var users []db.User
 	if _, err := db.Mysql.Select(&users, "select * from user"); err != nil {
@@ -43,32 +70,6 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mulekick.WriteJSON(w, http.StatusCreated, user)
-}
-
-func getUserMiddleware(w http.ResponseWriter, r *http.Request) {
-	userID, err := util.GetIntParam("user_id", w, r)
-	if err != nil {
-		return
-	}
-
-	var user db.User
-	if err := db.Mysql.SelectOne(&user, "select * from user where id=?", userID); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		panic(err)
-	}
-
-	editor := context.Get(r, "user").(*db.User)
-	if !editor.Admin && editor.ID != user.ID {
-		log.Warn(editor.Username + " is not permitted to edit users")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	context.Set(r, "_user", user)
 }
 
 func updateUser(w http.ResponseWriter, r *http.Request) {
