@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/ansible-semaphore/semaphore/db"
