@@ -16,7 +16,7 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	identifier := "environment"
 
 	paramGetter := SimpleParamGetter(identifier)
-	query := ProjectQueryGetter(identifier)
+	query := ProjectQueryGetter("project__"+identifier)
 
 	return GetMiddleware(MiddlewareOptions{
 		contextKey:    contextKey,

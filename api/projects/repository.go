@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"database/sql"
 	"net/http"
 	"os"
 	"strconv"
@@ -23,26 +22,43 @@ func clearRepositoryCache(repository db.Repository) error {
 	return nil
 }
 
-// RepositoryMiddleware ensures a repository exists and loads it to the context
-func RepositoryMiddleware(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	repositoryID, err := util.GetIntParam("repository_id", w, r)
-	if err != nil {
-		return
-	}
+func GetRepositoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	contextKey := "project"
+	identifier := "repository"
 
-	var repository db.Repository
-	if err := db.Mysql.SelectOne(&repository, "select * from project__repository where project_id=? and id=?", project.ID, repositoryID); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+	paramGetter := SimpleParamGetter(identifier)
+	query := ProjectQueryGetter("project__"+identifier)
 
-		panic(err)
-	}
-
-	context.Set(r, "repository", repository)
+	return GetMiddleware(MiddlewareOptions{
+		contextKey:    contextKey,
+		ID:            identifier,
+		queryFunc:     query,
+		paramGetFunc:  paramGetter,
+		getObjectFunc: func() interface{} { return new(db.Environment) },
+	},
+	)
 }
+
+// RepositoryMiddleware ensures a repository exists and loads it to the context
+//func RepositoryMiddleware(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	repositoryID, err := util.GetIntParam("repository_id", w, r)
+//	if err != nil {
+//		return
+//	}
+//
+//	var repository db.Repository
+//	if err := db.Mysql.SelectOne(&repository, "select * from project__repository where project_id=? and id=?", project.ID, repositoryID); err != nil {
+//		if err == sql.ErrNoRows {
+//			w.WriteHeader(http.StatusNotFound)
+//			return
+//		}
+//
+//		panic(err)
+//	}
+//
+//	context.Set(r, "repository", repository)
+//}
 
 // GetRepositories returns all repositories in a project sorted by type
 func GetRepositories(w http.ResponseWriter, r *http.Request) {

@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/ansible-semaphore/semaphore/db"
@@ -11,26 +10,43 @@ import (
 	"github.com/masterminds/squirrel"
 )
 
-// KeyMiddleware ensures a key exists and loads it to the context
-func KeyMiddleware(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	keyID, err := util.GetIntParam("key_id", w, r)
-	if err != nil {
-		return
-	}
+func GetKeysMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	contextKey := "project"
+	identifier := "key"
 
-	var key db.AccessKey
-	if err := db.Mysql.SelectOne(&key, "select * from access_key where project_id=? and id=?", project.ID, keyID); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+	paramGetter := SimpleParamGetter(identifier)
+	query := ProjectQueryGetter("access_key")
 
-		panic(err)
-	}
-
-	context.Set(r, "accessKey", key)
+	return GetMiddleware(MiddlewareOptions{
+		contextKey:    contextKey,
+		ID:            "accessKey",
+		queryFunc:     query,
+		paramGetFunc:  paramGetter,
+		getObjectFunc: func() interface{} { return new(db.Environment) },
+	},
+	)
 }
+
+// KeyMiddleware ensures a key exists and loads it to the context
+//func KeyMiddleware(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	keyID, err := util.GetIntParam("key_id", w, r)
+//	if err != nil {
+//		return
+//	}
+//
+//	var key db.AccessKey
+//	if err := db.Mysql.SelectOne(&key, "select * from access_key where project_id=? and id=?", project.ID, keyID); err != nil {
+//		if err == sql.ErrNoRows {
+//			w.WriteHeader(http.StatusNotFound)
+//			return
+//		}
+//
+//		panic(err)
+//	}
+//
+//	context.Set(r, "accessKey", key)
+//}
 
 // GetKeys retrieves sorted keys from the database
 func GetKeys(w http.ResponseWriter, r *http.Request) {

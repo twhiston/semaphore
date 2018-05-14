@@ -6,8 +6,8 @@ import (
 	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/gorilla/context"
-	"net/http"
 	"github.com/masterminds/squirrel"
+	"net/http"
 )
 
 type MiddlewareOptions struct {
@@ -25,6 +25,7 @@ func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *htt
 		params, err := options.paramGetFunc(ctx, w, r)
 		if err != nil {
 			util.LogErrorWithFields(err, logrus.Fields{"context": ctx, "params": params})
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -33,11 +34,12 @@ func GetMiddleware(options MiddlewareOptions) func(w http.ResponseWriter, r *htt
 
 		data := options.getObjectFunc()
 		if err := db.Mysql.SelectOne(&data, query, args...); err != nil {
-			if err == sql.ErrNoRows {
-				w.WriteHeader(http.StatusNotFound)
-				return
+			//Only log if the error is unexpected, but always return not found
+			if err != sql.ErrNoRows {
+				util.LogErrorWithFields(err, logrus.Fields{"data": data, "query": query, "args": args})
 			}
-			util.LogErrorWithFields(err, logrus.Fields{"data": data, "query": query, "args": args})
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 
 		context.Set(r, options.ID, data)
@@ -62,8 +64,8 @@ func ProjectQueryGetter(identifier string) func(context interface{}, params map[
 	return func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
 		project := context.(db.Project)
 		return squirrel.Select("*").
-			From("project__"+identifier).
-			Where("project_idstring, []interface{}=?", project.ID).
+			From(identifier).
+			Where("project_id=?", project.ID).
 			Where("id=?", params[identifier].(string)).
 			ToSql()
 	}

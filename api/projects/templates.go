@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -12,26 +11,43 @@ import (
 	"github.com/masterminds/squirrel"
 )
 
-// TemplatesMiddleware ensures a template exists and loads it to the context
-func TemplatesMiddleware(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	templateID, err := util.GetIntParam("template_id", w, r)
-	if err != nil {
-		return
-	}
+func GetTemplatesMiddleware() func(w http.ResponseWriter, r *http.Request) {
+	contextKey := "project"
+	identifier := "template"
 
-	var template db.Template
-	if err := db.Mysql.SelectOne(&template, "select * from project__template where project_id=? and id=?", project.ID, templateID); err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+	paramGetter := SimpleParamGetter(identifier)
+	query := ProjectQueryGetter("project__"+identifier)
 
-		panic(err)
-	}
-
-	context.Set(r, "template", template)
+	return GetMiddleware(MiddlewareOptions{
+		contextKey:    contextKey,
+		ID:            identifier,
+		queryFunc:     query,
+		paramGetFunc:  paramGetter,
+		getObjectFunc: func() interface{} { return new(db.Environment) },
+	},
+	)
 }
+
+// TemplatesMiddleware ensures a template exists and loads it to the context
+//func TemplatesMiddleware(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(db.Project)
+//	templateID, err := util.GetIntParam("template_id", w, r)
+//	if err != nil {
+//		return
+//	}
+//
+//	var template db.Template
+//	if err := db.Mysql.SelectOne(&template, "select * from project__template where project_id=? and id=?", project.ID, templateID); err != nil {
+//		if err == sql.ErrNoRows {
+//			w.WriteHeader(http.StatusNotFound)
+//			return
+//		}
+//
+//		panic(err)
+//	}
+//
+//	context.Set(r, "template", template)
+//}
 
 // GetTemplates returns all templates for a project in a sort order
 func GetTemplates(w http.ResponseWriter, r *http.Request) {

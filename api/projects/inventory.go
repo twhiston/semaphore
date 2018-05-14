@@ -23,7 +23,7 @@ func GetInventoryMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	identifier := "inventory"
 
 	paramGetter := SimpleParamGetter(identifier)
-	query := ProjectQueryGetter(identifier)
+	query := ProjectQueryGetter("project__"+identifier)
 
 	return GetMiddleware(MiddlewareOptions{
 		contextKey:    contextKey,

@@ -70,7 +70,7 @@ func Route() mulekick.Router {
 	api.Delete("/users/{user_id}", getUserMiddleware, deleteUser)
 
 	func(api mulekick.Router) {
-		api.Use(projects.ProjectMiddleware)
+		api.Use(projects.GetProjectMiddleware())
 
 		api.Get("", projects.GetProject)
 		api.Put("", projects.MustBeAdmin, projects.UpdateProject)
@@ -81,19 +81,19 @@ func Route() mulekick.Router {
 
 		api.Get("/users", projects.GetUsers)
 		api.Post("/users", projects.MustBeAdmin, projects.AddUser)
-		api.Post("/users/{user_id}/admin", projects.MustBeAdmin, projects.UserMiddleware, projects.MakeUserAdmin)
-		api.Delete("/users/{user_id}/admin", projects.MustBeAdmin, projects.UserMiddleware, projects.MakeUserAdmin)
-		api.Delete("/users/{user_id}", projects.MustBeAdmin, projects.UserMiddleware, projects.RemoveUser)
+		api.Post("/users/{user_id}/admin", projects.MustBeAdmin, projects.GetUsersMiddleware(), projects.MakeUserAdmin)
+		api.Delete("/users/{user_id}/admin", projects.MustBeAdmin, projects.GetUsersMiddleware(), projects.MakeUserAdmin)
+		api.Delete("/users/{user_id}", projects.MustBeAdmin, projects.GetUsersMiddleware(), projects.RemoveUser)
 
 		api.Get("/keys", projects.GetKeys)
 		api.Post("/keys", projects.AddKey)
-		api.Put("/keys/{key_id}", projects.KeyMiddleware, projects.UpdateKey)
-		api.Delete("/keys/{key_id}", projects.KeyMiddleware, projects.RemoveKey)
+		api.Put("/keys/{key_id}", projects.GetKeysMiddleware(), projects.UpdateKey)
+		api.Delete("/keys/{key_id}", projects.GetKeysMiddleware(), projects.RemoveKey)
 
 		api.Get("/repositories", projects.GetRepositories)
 		api.Post("/repositories", projects.AddRepository)
-		api.Put("/repositories/{repository_id}", projects.RepositoryMiddleware, projects.UpdateRepository)
-		api.Delete("/repositories/{repository_id}", projects.RepositoryMiddleware, projects.RemoveRepository)
+		api.Put("/repositories/{repository_id}", projects.GetRepositoryMiddleware(), projects.UpdateRepository)
+		api.Delete("/repositories/{repository_id}", projects.GetRepositoryMiddleware(), projects.RemoveRepository)
 
 		api.Get("/inventory", projects.GetInventory)
 		api.Post("/inventory", projects.AddInventory)
@@ -107,8 +107,8 @@ func Route() mulekick.Router {
 
 		api.Get("/templates", projects.GetTemplates)
 		api.Post("/templates", projects.AddTemplate)
-		api.Put("/templates/{template_id}", projects.TemplatesMiddleware, projects.UpdateTemplate)
-		api.Delete("/templates/{template_id}", projects.TemplatesMiddleware, projects.RemoveTemplate)
+		api.Put("/templates/{template_id}", projects.GetTemplatesMiddleware(), projects.UpdateTemplate)
+		api.Delete("/templates/{template_id}", projects.GetTemplatesMiddleware(), projects.RemoveTemplate)
 
 		api.Get("/tasks", tasks.GetAllTasks)
 		api.Get("/tasks/last", tasks.GetLastTasks)
