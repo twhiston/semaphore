@@ -17,7 +17,7 @@ func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
 
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
-		user := context.(db.User)
+		user := context.(*db.User)
 		return squirrel.Select("p.*").
 			From("project as p").
 			Join("project__user as pu on pu.project_id=p.id").
@@ -71,6 +71,7 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 // MustBeAdmin ensures that the user has administrator rights
+//TODO - move to router package
 func MustBeAdmin(w http.ResponseWriter, r *http.Request) {
 	project := context.Get(r, "project").(db.Project)
 	user := context.Get(r, "user").(*db.User)
