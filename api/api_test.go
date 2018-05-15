@@ -8,7 +8,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"os"
 	"log"
-	)
+)
 
 // TestApi Validates the api description in the root meets the swagger/openapi spec
 func TestApiSchemaValidation(t *testing.T) {
@@ -16,7 +16,7 @@ func TestApiSchemaValidation(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fpath := dir+"/../api-docs.yml"
+	fpath := dir + "/../api-docs.yml"
 	print(fpath)
 	document, err := loads.Spec(fpath)
 	if err != nil {

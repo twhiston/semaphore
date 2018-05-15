@@ -1,6 +1,6 @@
 package router
 
 const (
-	asc = "asc"
+	asc  = "asc"
 	desc = "desc"
 )

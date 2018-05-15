@@ -6,17 +6,18 @@ import (
 	trans "github.com/snikch/goodman/transaction"
 	"strconv"
 	"strings"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 // STATE
 // Runtime created objects we needs to reference in test setups
-var testRunnerUser *db.User
-var userPathTestUser *db.User
-var userProject *db.Project
-var userKey *db.AccessKey
-var task *db.Task
+var testRunnerUser *models.User
+var userPathTestUser *models.User
+var userProject *models.Project
+var userKey *models.AccessKey
+var task *models.Task
 
-// Runtime created simple ID values for some items we need to reference in other objects
+// Runtime created simple OutputContext values for some items we need to reference in other objects
 var repoID int64
 var inventoryID int64
 var environmentID int64
@@ -30,7 +31,7 @@ var capabilities = map[string][]string{
 	"inventory":   {"repository"},
 	"environment": {"repository"},
 	"template":    {"repository", "inventory", "environment"},
-	"task":		   {"template"},
+	"task":        {"template"},
 }
 
 func capabilityWrapper(cap string) func(t *trans.Transaction) {

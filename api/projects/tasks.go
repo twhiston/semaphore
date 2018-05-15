@@ -1,8 +1,7 @@
-package tasks
+package projects
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -11,28 +10,30 @@ import (
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
 	"github.com/ansible-semaphore/semaphore/router"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 func GetTaskMiddleware() func(w http.ResponseWriter, r *http.Request) {
-	identifier := taskTypeID
+	identifier := "task"
 
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
 		return squirrel.Select("*").
 			From("task").
-			Where("id=?", params[taskTypeID]).
+			Where("id=?", params["task"]).
 			ToSql()
 	}
 
 	return router.GetMiddleware(&router.MiddlewareOptions{
-		ContextKey:    "",
-		ID:            identifier,
-		QueryFunc:     query,
-		ParamGetFunc:  paramGetter,
-		GetObjectFunc: func() interface{} { return new(db.Environment) },
+		RequestContext: "",
+		OutputContext:  identifier,
+		QueryFunc:      query,
+		ParamGetFunc:   paramGetter,
+		GetObjectFunc:  func() interface{} { return new(models.Environment) },
 	},
 	)
 }
+
 // TaskMiddleware is middleware that gets a task by id and sets the context to it or panics
 //func TaskMiddleware(w http.ResponseWriter, r *http.Request) {
 //	taskID, err := util.GetIntParam("task_id", w, r)
@@ -48,13 +49,12 @@ func GetTaskMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //	context.Set(r, taskTypeID, task)
 //}
 
-
 // AddTask inserts a task into the database and returns a header or panics
 func AddTask(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	user := context.Get(r, "user").(*db.User)
+	//project := context.Get(r, "project").(models.Project)
+	user := context.Get(r, "user").(*models.User)
 
-	var taskObj db.Task
+	var taskObj models.Task
 	if err := mulekick.Bind(w, r, &taskObj); err != nil {
 		return
 	}
@@ -67,31 +67,32 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	pool.register <- &task{
-		task:      taskObj,
-		projectID: project.ID,
-	}
+	//TODO - The crux of the matter!
+	//pool.register <- &task{
+	//	task:      taskObj,
+	//	projectID: project.ID,
+	//}
 
-	objType := taskTypeID
-	desc := "Task ID " + strconv.Itoa(taskObj.ID) + " queued for running"
-	if err := (db.Event{
-		ProjectID:   &project.ID,
-		ObjectType:  &objType,
-		ObjectID:    &taskObj.ID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		panic(err)
-	}
+	//objType := taskTypeID
+	//desc := "Task OutputContext " + strconv.Itoa(taskObj.ID) + " queued for running"
+	//if err := (db.Event{
+	//	ProjectID:   &project.ID,
+	//	ObjectType:  &objType,
+	//	ObjectID:    &taskObj.ID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	panic(err)
+	//}
 
 	mulekick.WriteJSON(w, http.StatusCreated, taskObj)
 }
 
 // GetTasksList returns a list of tasks for the current project in desc order to limit or panics
 func GetTasksList(w http.ResponseWriter, r *http.Request, limit uint64) {
-	project := context.Get(r, "project").(db.Project)
+	project := context.Get(r, "project").(models.Project)
 
 	q := squirrel.Select("task.*, tpl.playbook as tpl_playbook, user.name as user_name, tpl.alias as tpl_alias").
-		From(taskTypeID).
+		From("task").
 		Join("project__template as tpl on task.template_id=tpl.id").
 		LeftJoin("user on task.user_id=user.id").
 		Where("tpl.project_id=?", project.ID).
@@ -104,7 +105,7 @@ func GetTasksList(w http.ResponseWriter, r *http.Request, limit uint64) {
 	query, args, _ := q.ToSql()
 
 	var tasks []struct {
-		db.Task
+		models.Task
 
 		TemplatePlaybook string  `db:"tpl_playbook" json:"tpl_playbook"`
 		TemplateAlias    string  `db:"tpl_alias" json:"tpl_alias"`
@@ -129,15 +130,15 @@ func GetLastTasks(w http.ResponseWriter, r *http.Request) {
 
 // GetTask returns a task based on its id
 func GetTask(w http.ResponseWriter, r *http.Request) {
-	task := context.Get(r, taskTypeID).(db.Task)
+	task := context.Get(r, "task").(models.Task)
 	mulekick.WriteJSON(w, http.StatusOK, task)
 }
 
 // GetTaskOutput returns the logged task output by id and writes it as json
 func GetTaskOutput(w http.ResponseWriter, r *http.Request) {
-	task := context.Get(r, taskTypeID).(db.Task)
+	task := context.Get(r, "task").(models.Task)
 
-	var output []db.TaskOutput
+	var output []models.TaskOutput
 	if _, err := db.Mysql.Select(&output, "select task_id, task, time, output from task__output where task_id=? order by time asc", task.ID); err != nil {
 		panic(err)
 	}
@@ -147,8 +148,8 @@ func GetTaskOutput(w http.ResponseWriter, r *http.Request) {
 
 // RemoveTask removes a task from the database
 func RemoveTask(w http.ResponseWriter, r *http.Request) {
-	task := context.Get(r, taskTypeID).(db.Task)
-	editor := context.Get(r, "user").(*db.User)
+	task := context.Get(r, "task").(models.Task)
+	editor := context.Get(r, "user").(*models.User)
 
 	if !editor.Admin {
 		log.Warn(editor.Username + " is not permitted to delete task logs")

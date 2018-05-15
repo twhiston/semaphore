@@ -14,7 +14,7 @@ var versionTmpl = `package util
 var Version = "{{ .VERSION }}"
 `
 
-func main(){
+func main() {
 
 	if len(os.Args) <= 1 {
 		log.Fatalln("Must pass in version number")

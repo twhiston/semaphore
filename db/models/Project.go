@@ -1,4 +1,4 @@
-package db
+package models
 
 import (
 	"time"
@@ -14,20 +14,20 @@ type Project struct {
 }
 
 // CreateProject writes a project to the database
-func (project *Project) CreateProject() error {
-	project.Created = time.Now()
-
-	res, err := Mysql.Exec("insert into project set name=?, created=?", project.Name, project.Created)
-	if err != nil {
-		return err
-	}
-
-	projectID, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-
-	project.ID = int(projectID)
-
-	return nil
-}
+//func (project *Project) CreateProject() error {
+//	project.Created = time.Now()
+//
+//	res, err := db.Mysql.Exec("insert into project set name=?, created=?", project.Name, project.Created)
+//	if err != nil {
+//		return err
+//	}
+//
+//	projectID, err := res.LastInsertId()
+//	if err != nil {
+//		return err
+//	}
+//
+//	project.ID = int(projectID)
+//
+//	return nil
+//}

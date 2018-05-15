@@ -2,14 +2,14 @@ package projects
 
 import (
 	"net/http"
-	"strconv"
 
-	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
 	"github.com/ansible-semaphore/semaphore/router"
+	"github.com/ansible-semaphore/semaphore/db/models"
+	"github.com/ansible-semaphore/semaphore/db"
 )
 
 func GetTemplatesMiddleware() func(w http.ResponseWriter, r *http.Request) {
@@ -17,28 +17,28 @@ func GetTemplatesMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	identifier := "template"
 
 	paramGetter := router.SimpleParamGetter(identifier)
-	query := router.ProjectQueryGetter("project__"+identifier)
+	query := router.ProjectQueryGetter("project__" + identifier)
 
 	return router.GetMiddleware(&router.MiddlewareOptions{
-		ContextKey:    contextKey,
-		ID:            identifier,
-		QueryFunc:     query,
-		ParamGetFunc:  paramGetter,
-		GetObjectFunc: func() interface{} { return new(db.Environment) },
+		RequestContext: contextKey,
+		OutputContext:  identifier,
+		QueryFunc:      query,
+		ParamGetFunc:   paramGetter,
+		GetObjectFunc:  func() interface{} { return new(models.Environment) },
 	},
 	)
 }
 
 // TemplatesMiddleware ensures a template exists and loads it to the context
 //func TemplatesMiddleware(w http.ResponseWriter, r *http.Request) {
-//	project := context.Get(r, "project").(db.Project)
+//	project := context.Get(r, "project").(models.Project)
 //	templateID, err := util.GetIntParam("template_id", w, r)
 //	if err != nil {
 //		return
 //	}
 //
-//	var template db.Template
-//	if err := db.Mysql.SelectOne(&template, "select * from project__template where project_id=? and id=?", project.ID, templateID); err != nil {
+//	var template models.Template
+//	if err := db.Mysql.SelectOne(&template, "select * from project__template where project_id=? and id=?", project.OutputContext, templateID); err != nil {
 //		if err == sql.ErrNoRows {
 //			w.WriteHeader(http.StatusNotFound)
 //			return
@@ -52,8 +52,8 @@ func GetTemplatesMiddleware() func(w http.ResponseWriter, r *http.Request) {
 
 // GetTemplates returns all templates for a project in a sort order
 func GetTemplates(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	var templates []db.Template
+	project := context.Get(r, "project").(models.Project)
+	var templates []models.Template
 
 	sort := r.URL.Query().Get("sort")
 	order := r.URL.Query().Get("order")
@@ -63,21 +63,21 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := squirrel.Select("pt.id",
-			"pt.ssh_key_id",
-			"pt.project_id",
-			"pt.inventory_id",
-			"pt.repository_id",
-			"pt.environment_id",
-			"pt.alias",
-			"pt.playbook",
-			"pt.arguments",
-			"pt.override_args").
-			From("project__template pt")
+		"pt.ssh_key_id",
+		"pt.project_id",
+		"pt.inventory_id",
+		"pt.repository_id",
+		"pt.environment_id",
+		"pt.alias",
+		"pt.playbook",
+		"pt.arguments",
+		"pt.override_args").
+		From("project__template pt")
 
 	switch sort {
 	case "alias", "playbook":
 		q = q.Where("pt.project_id=?", project.ID).
-			OrderBy("pt."+ sort + " " + order)
+			OrderBy("pt." + sort + " " + order)
 	case "ssh_key":
 		q = q.LeftJoin("access_key ak ON (pt.ssh_key_id = ak.id)").
 			Where("pt.project_id=?", project.ID).
@@ -96,7 +96,7 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 			OrderBy("pr.name " + order)
 	default:
 		q = q.Where("pt.project_id=?", project.ID).
-		OrderBy("pt.alias " + order)
+			OrderBy("pt.alias " + order)
 	}
 
 	query, args, err := q.ToSql()
@@ -111,9 +111,9 @@ func GetTemplates(w http.ResponseWriter, r *http.Request) {
 
 // AddTemplate adds a template to the database
 func AddTemplate(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
+	project := context.Get(r, "project").(models.Project)
 
-	var template db.Template
+	var template models.Template
 	if err := mulekick.Bind(w, r, &template); err != nil {
 		return
 	}
@@ -130,25 +130,25 @@ func AddTemplate(w http.ResponseWriter, r *http.Request) {
 
 	template.ID = int(insertID)
 
-	objType := "template"
-	desc := "Template ID " + strconv.Itoa(template.ID) + " created"
-	if err := (db.Event{
-		ProjectID:   &project.ID,
-		ObjectType:  &objType,
-		ObjectID:    &template.ID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		panic(err)
-	}
+	//objType := "template"
+	//desc := "Template OutputContext " + strconv.Itoa(template.ID) + " created"
+	//if err := (models.Event{
+	//	ProjectID:   &project.ID,
+	//	ObjectType:  &objType,
+	//	ObjectID:    &template.ID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	panic(err)
+	//}
 
 	mulekick.WriteJSON(w, http.StatusCreated, template)
 }
 
 // UpdateTemplate writes a template to an existing key in the database
 func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
-	oldTemplate := context.Get(r, "template").(db.Template)
+	oldTemplate := context.Get(r, "template").(models.Template)
 
-	var template db.Template
+	var template models.Template
 	if err := mulekick.Bind(w, r, &template); err != nil {
 		return
 	}
@@ -161,35 +161,35 @@ func UpdateTemplate(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	desc := "Template ID " + strconv.Itoa(template.ID) + " updated"
-	objType := "template"
-	if err := (db.Event{
-		ProjectID:   &oldTemplate.ProjectID,
-		Description: &desc,
-		ObjectID:    &oldTemplate.ID,
-		ObjectType:  &objType,
-	}.Insert()); err != nil {
-		panic(err)
-	}
+	//desc := "Template OutputContext " + strconv.Itoa(template.ID) + " updated"
+	//objType := "template"
+	//if err := (models.Event{
+	//	ProjectID:   &oldTemplate.ProjectID,
+	//	Description: &desc,
+	//	ObjectID:    &oldTemplate.ID,
+	//	ObjectType:  &objType,
+	//}.Insert()); err != nil {
+	//	panic(err)
+	//}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // RemoveTemplate deletes a template from the database
 func RemoveTemplate(w http.ResponseWriter, r *http.Request) {
-	tpl := context.Get(r, "template").(db.Template)
+	tpl := context.Get(r, "template").(models.Template)
 
 	if _, err := db.Mysql.Exec("delete from project__template where id=?", tpl.ID); err != nil {
 		panic(err)
 	}
 
-	desc := "Template ID " + strconv.Itoa(tpl.ID) + " deleted"
-	if err := (db.Event{
-		ProjectID:   &tpl.ProjectID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		panic(err)
-	}
+	//desc := "Template OutputContext " + strconv.Itoa(tpl.ID) + " deleted"
+	//if err := (models.Event{
+	//	ProjectID:   &tpl.ProjectID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	panic(err)
+	//}
 
 	w.WriteHeader(http.StatusNoContent)
 }

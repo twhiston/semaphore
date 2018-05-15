@@ -1,7 +1,6 @@
-package db
+package models
 
 import "time"
-
 
 //Task is a model of a task which will be executed by the runner
 type Task struct {

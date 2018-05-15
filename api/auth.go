@@ -2,14 +2,14 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
+
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
-	"github.com/gorilla/context"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 //nolint: gocyclo
@@ -17,7 +17,7 @@ func authentication(w http.ResponseWriter, r *http.Request) {
 	var userID int
 
 	if authHeader := strings.ToLower(r.Header.Get("authorization")); len(authHeader) > 0 && strings.Contains(authHeader, "bearer") {
-		var token db.APIToken
+		var token models.APIToken
 		if err := db.Mysql.SelectOne(&token, "select * from user__token where id=? and expired=0", strings.Replace(authHeader, "bearer ", "", 1)); err != nil {
 			if err == sql.ErrNoRows {
 				w.WriteHeader(http.StatusForbidden)
@@ -53,7 +53,7 @@ func authentication(w http.ResponseWriter, r *http.Request) {
 		sessionID := sessionVal.(int)
 
 		// fetch session
-		var session db.Session
+		var session models.Session
 		if err := db.Mysql.SelectOne(&session, "select * from session where id=? and user_id=? and expired=0", sessionID, userID); err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			return
@@ -75,12 +75,13 @@ func authentication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	user, err := db.FetchUser(userID)
-	if err != nil {
-		fmt.Println("Can't find user", err)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
+	//TODO - replace with abstraction
+	//user, err := db.FetchUser(userID)
+	//if err != nil {
+	//	fmt.Println("Can't find user", err)
+	//	w.WriteHeader(http.StatusForbidden)
+	//	return
+	//}
 
-	context.Set(r, "user", user)
+	//context.Set(r, "user", user)
 }

@@ -6,31 +6,23 @@ import (
 	"github.com/ansible-semaphore/semaphore/util"
 	_ "github.com/go-sql-driver/mysql" // imports mysql driver
 	"gopkg.in/gorp.v1"
-	"time"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
+type MysqlDB struct {
+	gorp.DbMap
+}
 // Mysql is the gorp database map
 // db.Connect must be called to set this up correctly
-var Mysql *gorp.DbMap
+//TODO - should not be instantiated like this
+var Mysql *MysqlDB
 
-// DatabaseTimeFormat represents the format that dredd uses to validate the datetime.
-// This is not the same as the raw value we pass to a new object so
-// we need to use this to coerce raw values to meet the API standard
-// /^\d{4}-(?:0[0-9]{1}|1[0-2]{1})-[0-9]{2}T\d{2}:\d{2}:\d{2}Z$/
-const DatabaseTimeFormat = "2006-01-02T15:04:05:99Z"
 
-// GetParsedTime returns the timestamp as it will retrieved from the database
-// This allows us to create timestamp consistency on return values from create requests
-func GetParsedTime(t time.Time) time.Time {
-	parsedTime, err := time.Parse(DatabaseTimeFormat,t.Format(DatabaseTimeFormat))
-	if err != nil {
-		log.Error(err)
-	}
-	return parsedTime
-}
+
 // Connect ensures that the db is connected and mapped properly with gorp
-func Connect() error {
+func (d *MysqlDB)Connect() error {
 	db, err := connect()
 	if err != nil {
 		return err
@@ -51,13 +43,31 @@ func Connect() error {
 		}
 	}
 
-	Mysql = &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"}}
+	d.Db = db
+	d.Dialect = gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"}
+	//Mysql = &MysqlDB{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"}}
+
 	return nil
+}
+
+// AddTableModels is called by main after initialization of the Mysql object to create or return an existing table map
+func AddTableModels() {
+	Mysql.AddTableWithName(models.APIToken{}, "user__token").SetKeys(false, "id")
+	Mysql.AddTableWithName(models.AccessKey{}, "access_key").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Environment{}, "project__environment").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Inventory{}, "project__inventory").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Project{}, "project").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Repository{}, "project__repository").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Task{}, "task").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.TaskOutput{}, "task__output").SetUniqueTogether("task_id", "time")
+	Mysql.AddTableWithName(models.Template{}, "project__template").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.User{}, "user").SetKeys(true, "id")
+	Mysql.AddTableWithName(models.Session{}, "session").SetKeys(true, "id")
 }
 
 // Close closes the mysql connection and reports any errors
 // called from main with a defer
-func Close() {
+func (d *MysqlDB)Close() {
 	err := Mysql.Db.Close()
 	if err != nil {
 		log.Warn("Error closing database:" + err.Error())

@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ansible-semaphore/semaphore/db"
-	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/ansible-semaphore/semaphore/router"
+	"github.com/ansible-semaphore/semaphore/db/models"
+	"errors"
+	"github.com/ansible-semaphore/semaphore/db"
 )
 
 func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
@@ -16,21 +17,21 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	identifier := "environment"
 
 	paramGetter := router.SimpleParamGetter(identifier)
-	query := router.ProjectQueryGetter("project__"+identifier)
+	query := router.ProjectQueryGetter("project__" + identifier)
 
 	return router.GetMiddleware(&router.MiddlewareOptions{
-		ContextKey:    contextKey,
-		ID:            identifier,
-		QueryFunc:     query,
-		ParamGetFunc:  paramGetter,
-		GetObjectFunc: func() interface{} { return new(db.Environment) },
+		RequestContext: contextKey,
+		OutputContext:  identifier,
+		QueryFunc:      query,
+		ParamGetFunc:   paramGetter,
+		GetObjectFunc:  func() interface{} { return new(models.Environment) },
 	},
 	)
 }
 
 // EnvironmentMiddleware ensures an environment exists and loads it to the context
 //func EnvironmentMiddleware(w http.ResponseWriter, r *http.Request) {
-//	project := context.Get(r, "project").(db.Project)
+//	project := context.Get(r, "project").(models.Project)
 //	envID, err := util.GetIntParam("environment_id", w, r)
 //	if err != nil {
 //		return
@@ -38,12 +39,12 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //
 //	query, args, err := squirrel.Select("*").
 //		From("project__environment").
-//		Where("project_id=?", project.ID).
+//		Where("project_id=?", project.OutputContext).
 //		Where("id=?", envID).
 //		ToSql()
 //	util.LogWarning(err)
 //
-//	var env db.Environment
+//	var env models.Environment
 //	if err := db.Mysql.SelectOne(&env, query, args...); err != nil {
 //		if err == sql.ErrNoRows {
 //			w.WriteHeader(http.StatusNotFound)
@@ -57,19 +58,20 @@ func GetEnvironmentMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //}
 
 func EnvironmentGetRequestHandler() func(w http.ResponseWriter, r *http.Request) {
-	return router.GetRequestHandler(&router.GetRequestOptions{
-		ContextKey: "project",
-		GetObjectFunc: func() interface{} {
-			return make([]db.Environment,0)
+	return router.GetGetRoute(&router.GetRequestOptions{
+		Context: "project",
+		NewModel: func() interface{} {
+			return make([]models.Environment, 0)
 		},
 		GetQuery: router.ProjectGetQueryGetter("environment", []string{"name"}),
-		},
+	},
 	)
 }
+
 //// GetEnvironment retrieves sorted environments from the database
 //func GetEnvironment(w http.ResponseWriter, r *http.Request) {
-//	project := context.Get(r, "project").(db.Project)
-//	var env []db.Environment
+//	project := context.Get(r, "project").(models.Project)
+//	var env []models.Environment
 //
 //	sort := r.URL.Query().Get("sort")
 //	order := r.URL.Query().Get("order")
@@ -80,14 +82,14 @@ func EnvironmentGetRequestHandler() func(w http.ResponseWriter, r *http.Request)
 //
 //	q := squirrel.Select("*").
 //		From("project__environment pe").
-//		Where("project_id=?", project.ID)
+//		Where("project_id=?", project.OutputContext)
 //
 //	switch sort {
 //	case "name":
-//		q = q.Where("pe.project_id=?", project.ID).
+//		q = q.Where("pe.project_id=?", project.OutputContext).
 //			OrderBy("pe." + sort + " " + order)
 //	default:
-//		q = q.Where("pe.project_id=?", project.ID).
+//		q = q.Where("pe.project_id=?", project.OutputContext).
 //			OrderBy("pe.name " + order)
 //	}
 //
@@ -101,72 +103,114 @@ func EnvironmentGetRequestHandler() func(w http.ResponseWriter, r *http.Request)
 //	mulekick.WriteJSON(w, http.StatusOK, env)
 //}
 
-// UpdateEnvironment updates an existing environment in the database
-func UpdateEnvironment(w http.ResponseWriter, r *http.Request) {
-	oldEnv := context.Get(r, "environment").(db.Environment)
-	var env db.Environment
-	if err := mulekick.Bind(w, r, &env); err != nil {
-		return
-	}
+func EnvironmentPutRequestHandler() func(w http.ResponseWriter, r *http.Request) {
+	return router.GetPutRoute(&router.PatchRequestOptions{
+		Context: "environment",
+		NewModel: func() interface{} {
+			return new(models.Environment)
+		},
+		ProcessInput: environmentValidation,
+	},
+	)
+}
 
+// UpdateEnvironment updates an existing environment in the database
+//func UpdateEnvironment(w http.ResponseWriter, r *http.Request) {
+//	oldEnv := context.Get(r, "environment").(models.Environment)
+//	var env models.Environment
+//	if err := mulekick.Bind(w, r, &env); err != nil {
+//		return
+//	}
+//
+//	var js map[string]interface{}
+//	if json.Unmarshal([]byte(env.JSON), &js) != nil {
+//		mulekick.WriteJSON(w, http.StatusBadRequest, map[string]string{
+//			"error": "JSON is not valid",
+//		})
+//		return
+//	}
+//
+//	if _, err := db.Mysql.Exec("update project__environment set name=?, json=? where id=?", env.Name, env.JSON, oldEnv.ID); err != nil {
+//		panic(err)
+//	}
+//
+//	w.WriteHeader(http.StatusNoContent)
+//}
+
+func EnvironmentCreateRequestHandler() func(w http.ResponseWriter, r *http.Request) {
+	return router.GetCreateRoute(&router.CreateOptions{
+		Context: "project",
+		NewModel: func() interface{} {
+			return new(models.Environment)
+		},
+		ProcessInput: environmentValidation,
+	},
+	)
+}
+
+func environmentValidation(context interface{}, model interface{}) error {
+	env := model.(models.Environment)
 	var js map[string]interface{}
 	if json.Unmarshal([]byte(env.JSON), &js) != nil {
-		mulekick.WriteJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "JSON is not valid",
-		})
-		return
+		return errors.New("json not valid")
 	}
-
-	if _, err := db.Mysql.Exec("update project__environment set name=?, json=? where id=?", env.Name, env.JSON, oldEnv.ID); err != nil {
-		panic(err)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 // AddEnvironment creates an environment in the database
-func AddEnvironment(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	var env db.Environment
+//func AddEnvironment(w http.ResponseWriter, r *http.Request) {
+//	project := context.Get(r, "project").(models.Project)
+//	var env models.Environment
+//
+//	if err := mulekick.Bind(w, r, &env); err != nil {
+//		return
+//	}
+//
+//	var js map[string]interface{}
+//	if json.Unmarshal([]byte(env.JSON), &js) != nil {
+//		mulekick.WriteJSON(w, http.StatusBadRequest, map[string]string{
+//			"error": "JSON is not valid",
+//		})
+//		return
+//	}
+//
+//	res, err := db.Mysql.Exec("insert into project__environment set project_id=?, name=?, json=?, password=?", project.ID, env.Name, env.JSON, env.Password)
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	insertID, err := res.LastInsertId()
+//	util.LogWarning(err)
+//	insertIDInt := int(insertID)
+//	objType := "environment"
+//
+//	desc := "Environment " + env.Name + " created"
+//	if err := (models.Event{
+//		ProjectID:   &project.ID,
+//		ObjectType:  &objType,
+//		ObjectID:    &insertIDInt,
+//		Description: &desc,
+//	}.Insert()); err != nil {
+//		panic(err)
+//	}
+//
+//	w.WriteHeader(http.StatusNoContent)
+//}
 
-	if err := mulekick.Bind(w, r, &env); err != nil {
-		return
-	}
-
-	var js map[string]interface{}
-	if json.Unmarshal([]byte(env.JSON), &js) != nil {
-		mulekick.WriteJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "JSON is not valid",
-		})
-		return
-	}
-
-	res, err := db.Mysql.Exec("insert into project__environment set project_id=?, name=?, json=?, password=?", project.ID, env.Name, env.JSON, env.Password)
-	if err != nil {
-		panic(err)
-	}
-
-	insertID, err := res.LastInsertId()
-	util.LogWarning(err)
-	insertIDInt := int(insertID)
-	objType := "environment"
-
-	desc := "Environment " + env.Name + " created"
-	if err := (db.Event{
-		ProjectID:   &project.ID,
-		ObjectType:  &objType,
-		ObjectID:    &insertIDInt,
-		Description: &desc,
-	}.Insert()); err != nil {
-		panic(err)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
+//func EnvironmentDeleteRequestHandler()func(w http.ResponseWriter, r *http.Request) {
+//	return router.GetPutRoute(&router.PatchRequestOptions{
+//		Context: "environment",
+//		NewModel: func() interface{} {
+//			return new(models.Environment)
+//		},
+//		ProcessInput: environmentValidation,
+//	},
+//	)
+//}
 
 // RemoveEnvironment deletes an environment from the database
 func RemoveEnvironment(w http.ResponseWriter, r *http.Request) {
-	env := context.Get(r, "environment").(db.Environment)
+	env := context.Get(r, "environment").(models.Environment)
 
 	templatesC, err := db.Mysql.SelectInt("select count(1) from project__template where project_id=? and environment_id=?", env.ProjectID, env.ID)
 	if err != nil {
@@ -195,13 +239,13 @@ func RemoveEnvironment(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	desc := "Environment " + env.Name + " deleted"
-	if err := (db.Event{
-		ProjectID:   &env.ProjectID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		panic(err)
-	}
+	//desc := "Environment " + env.Name + " deleted"
+	//if err := (models.Event{
+	//	ProjectID:   &env.ProjectID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	panic(err)
+	//}
 
 	w.WriteHeader(http.StatusNoContent)
 }

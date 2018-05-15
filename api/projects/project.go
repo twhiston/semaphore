@@ -3,12 +3,13 @@ package projects
 import (
 	"net/http"
 
-	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
 	"github.com/ansible-semaphore/semaphore/router"
+	"github.com/ansible-semaphore/semaphore/db/models"
+	"github.com/ansible-semaphore/semaphore/db"
 )
 
 func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +18,7 @@ func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
 
 	paramGetter := router.SimpleParamGetter(identifier)
 	query := func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
-		user := context.(*db.User)
+		user := context.(*models.User)
 		return squirrel.Select("p.*").
 			From("project as p").
 			Join("project__user as pu on pu.project_id=p.id").
@@ -27,17 +28,18 @@ func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
 	}
 
 	return router.GetMiddleware(&router.MiddlewareOptions{
-		ContextKey:    contextKey,
-		ID:            identifier,
-		QueryFunc:     query,
-		ParamGetFunc:  paramGetter,
-		GetObjectFunc: func() interface{} { return new(db.Environment) },
+		RequestContext: contextKey,
+		OutputContext:  identifier,
+		QueryFunc:      query,
+		ParamGetFunc:   paramGetter,
+		GetObjectFunc:  func() interface{} { return new(models.Environment) },
 	},
 	)
 }
+
 // ProjectMiddleware ensures a project exists and loads it to the context
 //func ProjectMiddleware(w http.ResponseWriter, r *http.Request) {
-//	user := context.Get(r, "user").(*db.User)
+//	user := context.Get(r, "user").(*models.User)
 //
 //	projectID, err := util.GetIntParam("project_id", w, r)
 //	if err != nil {
@@ -48,11 +50,11 @@ func GetProjectMiddleware() func(w http.ResponseWriter, r *http.Request) {
 //		From("project as p").
 //		Join("project__user as pu on pu.project_id=p.id").
 //		Where("p.id=?", projectID).
-//		Where("pu.user_id=?", user.ID).
+//		Where("pu.user_id=?", user.OutputContext).
 //		ToSql()
 //	util.LogWarning(err)
 //
-//	var project db.Project
+//	var project models.Project
 //	if err := db.Mysql.SelectOne(&project, query, args...); err != nil {
 //		if err == sql.ErrNoRows {
 //			w.WriteHeader(http.StatusNotFound)
@@ -71,10 +73,10 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 // MustBeAdmin ensures that the user has administrator rights
-//TODO - move to router package
+//TODO - move to authentication package, where we can implement the future changes to permissions
 func MustBeAdmin(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
-	user := context.Get(r, "user").(*db.User)
+	project := context.Get(r, "project").(models.Project)
+	user := context.Get(r, "user").(*models.User)
 
 	userC, err := db.Mysql.SelectInt("select count(1) from project__user as pu join user as u on pu.user_id=u.id where pu.user_id=? and pu.project_id=? and pu.admin=1", user.ID, project.ID)
 	if err != nil {
@@ -89,7 +91,7 @@ func MustBeAdmin(w http.ResponseWriter, r *http.Request) {
 
 // UpdateProject saves updated project details to the database
 func UpdateProject(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
+	project := context.Get(r, "project").(models.Project)
 	var body struct {
 		Name      string `json:"name"`
 		Alert     bool   `json:"alert"`
@@ -109,7 +111,7 @@ func UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 // DeleteProject removes a project from the database
 func DeleteProject(w http.ResponseWriter, r *http.Request) {
-	project := context.Get(r, "project").(db.Project)
+	project := context.Get(r, "project").(models.Project)
 
 	tx, err := db.Mysql.Begin()
 	if err != nil {

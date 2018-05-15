@@ -12,6 +12,7 @@ import (
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 func getUser(w http.ResponseWriter, r *http.Request) {
@@ -24,9 +25,9 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAPITokens(w http.ResponseWriter, r *http.Request) {
-	user := context.Get(r, "user").(*db.User)
+	user := context.Get(r, "user").(*models.User)
 
-	var tokens []db.APIToken
+	var tokens []models.APIToken
 	if _, err := db.Mysql.Select(&tokens, "select * from user__token where user_id=?", user.ID); err != nil {
 		panic(err)
 	}
@@ -35,13 +36,13 @@ func getAPITokens(w http.ResponseWriter, r *http.Request) {
 }
 
 func createAPIToken(w http.ResponseWriter, r *http.Request) {
-	user := context.Get(r, "user").(*db.User)
+	user := context.Get(r, "user").(*models.User)
 	tokenID := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, tokenID); err != nil {
 		panic(err)
 	}
 
-	token := db.APIToken{
+	token := models.APIToken{
 		ID:      strings.ToLower(base64.URLEncoding.EncodeToString(tokenID)),
 		Created: db.GetParsedTime(time.Now()),
 		UserID:  user.ID,
@@ -56,7 +57,7 @@ func createAPIToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func expireAPIToken(w http.ResponseWriter, r *http.Request) {
-	user := context.Get(r, "user").(*db.User)
+	user := context.Get(r, "user").(*models.User)
 
 	tokenID := mux.Vars(r)["token_id"]
 	res, err := db.Mysql.Exec("update user__token set expired=1 where id=? and user_id=?", tokenID, user.ID)

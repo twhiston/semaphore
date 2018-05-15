@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
 )
 
@@ -30,7 +29,7 @@ func (t *task) sendMailAlert() {
 		return
 	}
 
-	mailHost := util.Config.EmailHost + ":" + util.Config.EmailPort
+	//mailHost := util.Config.EmailHost + ":" + util.Config.EmailPort
 
 	var mailBuffer bytes.Buffer
 	alert := Alert{
@@ -44,18 +43,18 @@ func (t *task) sendMailAlert() {
 
 	t.panicOnError(tpl.Execute(&mailBuffer, alert), "Can't generate alert template!")
 
-	for _, user := range t.users {
-		userObj, err := db.FetchUser(user)
-
-		if !userObj.Alert {
-			return
-		}
-		t.panicOnError(err,"Can't find user Email!")
-
-		t.log("Sending email to " + userObj.Email + " from " + util.Config.EmailSender)
-		err = util.SendMail(mailHost, util.Config.EmailSender, userObj.Email, mailBuffer)
-		t.panicOnError(err, "Can't send email!")
-	}
+	//for _, user := range t.users {
+	//	userObj, err := db.FetchUser(user)
+	//
+	//	if !userObj.Alert {
+	//		return
+	//	}
+	//	t.panicOnError(err, "Can't find user Email!")
+	//
+	//	t.log("Sending email to " + userObj.Email + " from " + util.Config.EmailSender)
+	//	err = util.SendMail(mailHost, util.Config.EmailSender, userObj.Email, mailBuffer)
+	//	t.panicOnError(err, "Can't send email!")
+	//}
 }
 
 func (t *task) sendTelegramAlert() {
@@ -79,7 +78,7 @@ func (t *task) sendTelegramAlert() {
 	tpl, err := tpl.Parse(telegramTemplate)
 	util.LogError(err)
 
-	t.panicOnError(tpl.Execute(&telegramBuffer, alert),"Can't generate alert template!")
+	t.panicOnError(tpl.Execute(&telegramBuffer, alert), "Can't generate alert template!")
 
 	resp, err := http.Post("https://api.telegram.org/bot"+util.Config.TelegramToken+"/sendMessage", "application/json", &telegramBuffer)
 	t.panicOnError(err, "Can't send telegram alert!")

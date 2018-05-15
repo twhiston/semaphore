@@ -321,7 +321,7 @@ func (conf *configType) Scan() {
 			conf.TelegramToken = ""
 		}
 
-		fmt.Print(" > Telegram chat ID (default ''): ")
+		fmt.Print(" > Telegram chat OutputContext (default ''): ")
 		ScanErrorChecker(fmt.Scanln(&conf.TelegramChat))
 
 		if len(conf.TelegramChat) == 0 {
@@ -414,4 +414,3 @@ func (conf *configType) Scan() {
 		conf.LdapEnable = false
 	}
 }
-

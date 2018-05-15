@@ -1,4 +1,4 @@
-package db
+package models
 
 import "time"
 
@@ -15,8 +15,8 @@ type Event struct {
 }
 
 // Insert writes the event to the database
-func (evt Event) Insert() error {
-	_, err := Mysql.Exec("insert into event set project_id=?, object_id=?, object_type=?, description=?, created=UTC_TIMESTAMP(6)", evt.ProjectID, evt.ObjectID, evt.ObjectType, evt.Description)
-
-	return err
-}
+//func (evt Event) Insert() error {
+//	_, err := Mysql.Exec("insert into event set project_id=?, object_id=?, object_type=?, description=?, created=UTC_TIMESTAMP(6)", evt.ProjectID, evt.ObjectID, evt.ObjectType, evt.Description)
+//
+//	return err
+//}

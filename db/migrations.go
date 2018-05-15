@@ -71,7 +71,7 @@ func (version *Version) Run() error {
 	return tx.Commit()
 }
 
-func handleRollbackError(err error){
+func handleRollbackError(err error) {
 	if err != nil {
 		log.Warn(err.Error())
 	}
@@ -101,7 +101,7 @@ func (version *Version) TryRollback() {
 
 // MigrateAll checks for db migrations and executes them
 func MigrateAll() error {
-	fmt.Println("Checking DB migrations")
+	fmt.Println("Checking Connection migrations")
 	didRun := false
 
 	// go from beginning to the end

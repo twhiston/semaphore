@@ -5,8 +5,7 @@ import (
 	"strings"
 
 	"github.com/ansible-semaphore/semaphore/api/projects"
-	"github.com/ansible-semaphore/semaphore/api/sockets"
-	"github.com/ansible-semaphore/semaphore/api/tasks"
+	"github.com/ansible-semaphore/semaphore/sockets"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gobuffalo/packr"
@@ -25,7 +24,10 @@ func JSONMiddleware(w http.ResponseWriter, r *http.Request) {
 func PlainTextMiddleware(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain; charset=utf-8")
 }
+
 // Route declares all routes
+// TODO - make this in a way that routes dont need to be manually declared
+// wrap up all the api changes and the route config into type and just process them here
 func Route() mulekick.Router {
 	r := mulekick.New(mux.NewRouter(), mulekick.CorsMiddleware, JSONMiddleware)
 	r.NotFoundHandler = http.HandlerFunc(servePublic)
@@ -57,7 +59,7 @@ func Route() mulekick.Router {
 		api.Delete("/tokens/{token_id}", expireAPIToken)
 	}(api.Group("/user"))
 
-	api.Get("/projects", projects.GetProjects)
+	api.Get("/projects", projects.ProjectsGetRequestHandler())
 	api.Post("/projects", projects.AddProject)
 	api.Get("/events", getAllEvents)
 	api.Get("/events/last", getLastEvents)
@@ -96,13 +98,13 @@ func Route() mulekick.Router {
 		api.Delete("/repositories/{repository_id}", projects.GetRepositoryMiddleware(), projects.RemoveRepository)
 
 		api.Get("/inventory", projects.InventoryGetRequestHandler())
-		api.Post("/inventory", projects.AddInventory)
-		api.Put("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.UpdateInventory)
+		api.Post("/inventory", projects.InventoryCreateRequestHandler())
+		api.Put("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.InventoryPutRequestHandler())
 		api.Delete("/inventory/{inventory_id}", projects.GetInventoryMiddleware(), projects.RemoveInventory)
 
 		api.Get("/environment", projects.EnvironmentGetRequestHandler())
-		api.Post("/environment", projects.AddEnvironment)
-		api.Put("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.UpdateEnvironment)
+		api.Post("/environment", projects.EnvironmentCreateRequestHandler())
+		api.Put("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.EnvironmentPutRequestHandler())
 		api.Delete("/environment/{environment_id}", projects.GetEnvironmentMiddleware(), projects.RemoveEnvironment)
 
 		api.Get("/templates", projects.GetTemplates)
@@ -110,12 +112,12 @@ func Route() mulekick.Router {
 		api.Put("/templates/{template_id}", projects.GetTemplatesMiddleware(), projects.UpdateTemplate)
 		api.Delete("/templates/{template_id}", projects.GetTemplatesMiddleware(), projects.RemoveTemplate)
 
-		api.Get("/tasks", tasks.GetAllTasks)
-		api.Get("/tasks/last", tasks.GetLastTasks)
-		api.Post("/tasks", tasks.AddTask)
-		api.Get("/tasks/{task_id}/output", tasks.GetTaskMiddleware(), tasks.GetTaskOutput)
-		api.Get("/tasks/{task_id}", tasks.GetTaskMiddleware(), tasks.GetTask)
-		api.Delete("/tasks/{task_id}", tasks.GetTaskMiddleware(), tasks.RemoveTask)
+		api.Get("/tasks", projects.GetAllTasks)
+		api.Get("/tasks/last", projects.GetLastTasks)
+		api.Post("/tasks", projects.AddTask)
+		api.Get("/tasks/{task_id}/output", projects.GetTaskMiddleware(), projects.GetTaskOutput)
+		api.Get("/tasks/{task_id}", projects.GetTaskMiddleware(), projects.GetTask)
+		api.Delete("/tasks/{task_id}", projects.GetTaskMiddleware(), projects.RemoveTask)
 	}(api.Group("/project/{project_id}"))
 
 	return r

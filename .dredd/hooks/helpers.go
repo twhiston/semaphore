@@ -10,12 +10,13 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 // Test Runner User
 func addTestRunnerUser() {
 	uid := getUUID()
-	testRunnerUser = &db.User{
+	testRunnerUser = &models.User{
 		Username: "ITU-" + uid,
 		Name:     "ITU-" + uid,
 		Email:    uid + "@semaphore.test",
@@ -58,13 +59,13 @@ func deleteUserProjectRelation(pid int, user int) {
 	}
 }
 
-func addAccessKey(pid *int) *db.AccessKey {
+func addAccessKey(pid *int) *models.AccessKey {
 	uid := getUUID()
 	secret := "5up3r53cr3t"
-	key := db.AccessKey{
+	key := models.AccessKey{
 		Name:      "ITK-" + uid,
 		Type:      "ssh",
-		Secret:	   &secret,
+		Secret:    &secret,
 		ProjectID: pid,
 	}
 	if err := db.Mysql.Insert(&key); err != nil {
@@ -73,9 +74,9 @@ func addAccessKey(pid *int) *db.AccessKey {
 	return &key
 }
 
-func addProject() *db.Project {
+func addProject() *models.Project {
 	uid := getUUID()
-	project := db.Project{
+	project := models.Project{
 		Name:    "ITP-" + uid,
 		Created: time.Now(),
 	}
@@ -85,9 +86,9 @@ func addProject() *db.Project {
 	return &project
 }
 
-func addUser() *db.User {
+func addUser() *models.User {
 	uid := getUUID()
-	user := db.User{
+	user := models.User{
 		Created:  time.Now(),
 		Username: "ITU-" + uid,
 		Email:    "test@semaphore." + uid,
@@ -98,12 +99,12 @@ func addUser() *db.User {
 	return &user
 }
 
-func addTask() *db.Task {
-	t := db.Task{
+func addTask() *models.Task {
+	t := models.Task{
 		TemplateID: int(templateID),
-		Status: "testing",
-		UserID: &userPathTestUser.ID,
-		Created: db.GetParsedTime(time.Now()),
+		Status:     "testing",
+		UserID:     &userPathTestUser.ID,
+		Created:    db.GetParsedTime(time.Now()),
 	}
 	if err := db.Mysql.Insert(&t); err != nil {
 		fmt.Println(err)
@@ -120,7 +121,7 @@ func deleteObject(i interface{}) {
 
 // Token Handling
 func addToken(tok string, user int) {
-	token := db.APIToken{
+	token := models.APIToken{
 		ID:      tok,
 		Created: time.Now(),
 		UserID:  user,
@@ -132,7 +133,7 @@ func addToken(tok string, user int) {
 }
 
 func deleteToken(tok string, user int) {
-	token := db.APIToken{
+	token := models.APIToken{
 		ID:     tok,
 		UserID: user,
 	}
@@ -155,7 +156,7 @@ func randomString(strlen int) string {
 	result := ""
 	for i := 0; i < strlen; i++ {
 		index := r.Intn(len(chars))
-		result += chars[index : index+1]
+		result += chars[index: index+1]
 	}
 	return result
 }
@@ -173,7 +174,7 @@ func dbConnect() {
 	if err := db.Connect(); err != nil {
 		panic(err)
 	}
-	db.SetupDBLink()
+	db.AddTableModels()
 }
 
 func stringInSlice(a string, list []string) (int, bool) {

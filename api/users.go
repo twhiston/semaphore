@@ -11,6 +11,7 @@ import (
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 //TODO - does not fit generic middleware pattern
@@ -20,7 +21,7 @@ func getUserMiddleware(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user db.User
+	var user models.User
 	if err := db.Mysql.SelectOne(&user, "select * from user where id=?", userID); err != nil {
 		if err == sql.ErrNoRows {
 			w.WriteHeader(http.StatusNotFound)
@@ -30,7 +31,7 @@ func getUserMiddleware(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	editor := context.Get(r, "user").(*db.User)
+	editor := context.Get(r, "user").(*models.User)
 	if !editor.Admin && editor.ID != user.ID {
 		log.Warn(editor.Username + " is not permitted to edit users")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -41,7 +42,7 @@ func getUserMiddleware(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUsers(w http.ResponseWriter, r *http.Request) {
-	var users []db.User
+	var users []models.User
 	if _, err := db.Mysql.Select(&users, "select * from user"); err != nil {
 		panic(err)
 	}
@@ -50,13 +51,13 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
-	var user db.User
+	var user models.User
 	if err := mulekick.Bind(w, r, &user); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	editor := context.Get(r, "user").(*db.User)
+	editor := context.Get(r, "user").(*models.User)
 	if !editor.Admin {
 		log.Warn(editor.Username + " is not permitted to create users")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -73,10 +74,10 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateUser(w http.ResponseWriter, r *http.Request) {
-	oldUser := context.Get(r, "_user").(db.User)
-	editor := context.Get(r, "user").(*db.User)
+	oldUser := context.Get(r, "_user").(models.User)
+	editor := context.Get(r, "user").(*models.User)
 
-	var user db.User
+	var user models.User
 	if err := mulekick.Bind(w, r, &user); err != nil {
 		return
 	}
@@ -107,8 +108,8 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateUserPassword(w http.ResponseWriter, r *http.Request) {
-	user := context.Get(r, "_user").(db.User)
-	editor := context.Get(r, "user").(*db.User)
+	user := context.Get(r, "_user").(models.User)
+	editor := context.Get(r, "user").(*models.User)
 
 	var pwd struct {
 		Pwd string `json:"password"`
@@ -140,8 +141,8 @@ func updateUserPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteUser(w http.ResponseWriter, r *http.Request) {
-	user := context.Get(r, "_user").(db.User)
-	editor := context.Get(r, "user").(*db.User)
+	user := context.Get(r, "_user").(models.User)
+	editor := context.Get(r, "user").(*models.User)
 
 	if !editor.Admin && editor.ID != user.ID {
 		log.Warn(editor.Username + " is not permitted to delete users")

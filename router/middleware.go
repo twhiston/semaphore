@@ -8,21 +8,22 @@ import (
 	"github.com/gorilla/context"
 	"github.com/masterminds/squirrel"
 	"net/http"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 type MiddlewareOptions struct {
-	ContextKey string
-	ID         string
+	RequestContext string
+	OutputContext  string
 	QueryFunc func(ctx interface{}, params map[string]interface{}) (string, []interface{}, error)
 	ParamGetFunc func(context interface{}, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error)
-	GetObjectFunc func() interface{}
+	GetObjectFunc   func() interface{}
 	PostRequestFunc func(w http.ResponseWriter, r *http.Request)
 }
 
 func GetMiddleware(options *MiddlewareOptions) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Get(r, options.ContextKey)
+		ctx := context.Get(r, options.RequestContext)
 		params, err := options.ParamGetFunc(ctx, w, r)
 		if err != nil {
 			util.LogErrorWithFields(err, logrus.Fields{"context": ctx, "params": params})
@@ -44,7 +45,7 @@ func GetMiddleware(options *MiddlewareOptions) func(w http.ResponseWriter, r *ht
 		}
 
 		options.PostRequestFunc(w, r)
-		context.Set(r, options.ID, data)
+		context.Set(r, options.OutputContext, data)
 	}
 }
 
@@ -64,7 +65,8 @@ func SimpleParamGetter(paramID string) func(interface{}, http.ResponseWriter, *h
 // ProjectQueryGetter returns a simple query with a single controllable where clause based on the param identifier
 func ProjectQueryGetter(identifier string) func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
 	return func(context interface{}, params map[string]interface{}) (string, []interface{}, error) {
-		project := context.(db.Project)
+		//TODO - should be a safe public method for casting to anything in a handler that writes an error and returns if it fails
+		project := context.(models.Project)
 		return squirrel.Select("*").
 			From(identifier).
 			Where("project_id=?", project.ID).

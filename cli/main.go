@@ -12,13 +12,14 @@ import (
 	"time"
 
 	"github.com/ansible-semaphore/semaphore/api"
-	"github.com/ansible-semaphore/semaphore/api/sockets"
-	"github.com/ansible-semaphore/semaphore/api/tasks"
+	"github.com/ansible-semaphore/semaphore/sockets"
+	"github.com/ansible-semaphore/semaphore/tasks"
 	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/gorilla/handlers"
 	"golang.org/x/crypto/bcrypt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 func main() {
@@ -45,7 +46,7 @@ func main() {
 		panic(err)
 	}
 
-	db.SetupDBLink()
+	db.AddTableModels()
 	defer db.Close()
 
 	if err := db.MigrateAll(); err != nil {
@@ -53,7 +54,7 @@ func main() {
 	}
 	// legacy
 	if util.Migration {
-		fmt.Println("\n DB migrations run on startup automatically")
+		fmt.Println("\n Connection migrations run on startup automatically")
 		return
 	}
 
@@ -139,7 +140,7 @@ func doSetup() int {
 		os.Exit(1)
 	}
 
-	fmt.Println("\n Running DB Migrations..")
+	fmt.Println("\n Running Connection Migrations..")
 	if err = db.MigrateAll(); err != nil {
 		fmt.Printf("\n Database migrations failed!\n %v\n", err.Error())
 		os.Exit(1)
@@ -147,13 +148,13 @@ func doSetup() int {
 
 	stdin := bufio.NewReader(os.Stdin)
 
-	var user db.User
+	var user models.User
 	user.Username = readNewline("\n\n > Username: ", stdin)
 	user.Username = strings.ToLower(user.Username)
 	user.Email = readNewline(" > Email: ", stdin)
 	user.Email = strings.ToLower(user.Email)
 
-	var existingUser db.User
+	var existingUser models.User
 	err = db.Mysql.SelectOne(&existingUser, "select * from user where email=? or username=?", user.Email, user.Username)
 	util.LogWarning(err)
 

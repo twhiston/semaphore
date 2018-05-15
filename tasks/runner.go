@@ -16,21 +16,21 @@ import (
 
 	"github.com/ansible-semaphore/semaphore/db"
 	"github.com/ansible-semaphore/semaphore/util"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
 const (
 	taskFailStatus = "error"
-	taskTypeID = "task"
+	taskTypeID     = "task"
 )
 
-
 type task struct {
-	task        db.Task
-	template    db.Template
-	sshKey      db.AccessKey
-	inventory   db.Inventory
-	repository  db.Repository
-	environment db.Environment
+	task        models.Task
+	template    models.Template
+	sshKey      models.AccessKey
+	inventory   models.Inventory
+	repository  models.Repository
+	environment models.Environment
 	users       []int
 	projectID   int
 	hosts       []string
@@ -52,16 +52,16 @@ func (t *task) prepareRun() {
 	defer func() {
 		fmt.Println("Stopped preparing task")
 
-		objType := taskTypeID
-		desc := "Task ID " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " finished - " + strings.ToUpper(t.task.Status)
-		if err := (db.Event{
-			ProjectID:   &t.projectID,
-			ObjectType:  &objType,
-			ObjectID:    &t.task.ID,
-			Description: &desc,
-		}.Insert()); err != nil {
-			t.panicOnError(err, "Fatal error inserting an event")
-		}
+		//objType := taskTypeID
+		//desc := "Task OutputContext " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " finished - " + strings.ToUpper(t.task.Status)
+		//if err := (db.Event{
+		//	ProjectID:   &t.projectID,
+		//	ObjectType:  &objType,
+		//	ObjectID:    &t.task.ID,
+		//	Description: &desc,
+		//}.Insert()); err != nil {
+		//	t.panicOnError(err, "Fatal error inserting an event")
+		//}
 	}()
 
 	t.log("Preparing: " + strconv.Itoa(t.task.ID))
@@ -79,17 +79,17 @@ func (t *task) prepareRun() {
 		return
 	}
 
-	objType := taskTypeID
-	desc := "Task ID " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " is preparing"
-	if err := (db.Event{
-		ProjectID:   &t.projectID,
-		ObjectType:  &objType,
-		ObjectID:    &t.task.ID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		t.log("Fatal error inserting an event")
-		panic(err)
-	}
+	//objType := taskTypeID
+	//desc := "Task OutputContext " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " is preparing"
+	//if err := (db.Event{
+	//	ProjectID:   &t.projectID,
+	//	ObjectType:  &objType,
+	//	ObjectID:    &t.task.ID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	t.log("Fatal error inserting an event")
+	//	panic(err)
+	//}
 
 	t.log("Prepare task with template: " + t.template.Alias + "\n")
 
@@ -137,17 +137,17 @@ func (t *task) run() {
 		t.task.End = &now
 		t.updateStatus()
 
-		objType := taskTypeID
-		desc := "Task ID " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " finished - " + strings.ToUpper(t.task.Status)
-		if err := (db.Event{
-			ProjectID:   &t.projectID,
-			ObjectType:  &objType,
-			ObjectID:    &t.task.ID,
-			Description: &desc,
-		}.Insert()); err != nil {
-			t.log("Fatal error inserting an event")
-			panic(err)
-		}
+		//objType := taskTypeID
+		//desc := "Task OutputContext " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " finished - " + strings.ToUpper(t.task.Status)
+		//if err := (db.Event{
+		//	ProjectID:   &t.projectID,
+		//	ObjectType:  &objType,
+		//	ObjectID:    &t.task.ID,
+		//	Description: &desc,
+		//}.Insert()); err != nil {
+		//	t.log("Fatal error inserting an event")
+		//	panic(err)
+		//}
 	}()
 
 	{
@@ -158,17 +158,17 @@ func (t *task) run() {
 		t.updateStatus()
 	}
 
-	objType := taskTypeID
-	desc := "Task ID " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " is running"
-	if err := (db.Event{
-		ProjectID:   &t.projectID,
-		ObjectType:  &objType,
-		ObjectID:    &t.task.ID,
-		Description: &desc,
-	}.Insert()); err != nil {
-		t.log("Fatal error inserting an event")
-		panic(err)
-	}
+	//objType := taskTypeID
+	//desc := "Task OutputContext " + strconv.Itoa(t.task.ID) + " (" + t.template.Alias + ")" + " is running"
+	//if err := (db.Event{
+	//	ProjectID:   &t.projectID,
+	//	ObjectType:  &objType,
+	//	ObjectID:    &t.task.ID,
+	//	Description: &desc,
+	//}.Insert()); err != nil {
+	//	t.log("Fatal error inserting an event")
+	//	panic(err)
+	//}
 
 	t.log("Started: " + strconv.Itoa(t.task.ID))
 	t.log("Run task with template: " + t.template.Alias + "\n")
@@ -205,7 +205,7 @@ func (t *task) populateDetails() error {
 		return err
 	}
 
-	var project db.Project
+	var project models.Project
 	// get project alert setting
 	if err := t.fetch("Alert setting not found!", &project, "select alert, alert_chat from project where id=?", t.template.ProjectID); err != nil {
 		return err
@@ -282,7 +282,7 @@ func (t *task) populateDetails() error {
 	return nil
 }
 
-func (t *task) installKey(key db.AccessKey) error {
+func (t *task) installKey(key models.AccessKey) error {
 	t.log("access key " + key.Name + " installed")
 
 	path := key.GetPath()
@@ -299,7 +299,7 @@ func (t *task) updateRepository() error {
 	repoName := "repository_" + strconv.Itoa(t.repository.ID)
 	_, err := os.Stat(util.Config.TmpPath + "/" + repoName)
 
-	cmd := exec.Command("git")//nolint: gas
+	cmd := exec.Command("git") //nolint: gas
 	cmd.Dir = util.Config.TmpPath
 
 	gitSSHCommand := "ssh -o StrictHostKeyChecking=no -i " + t.repository.SSHKey.GetPath()
@@ -335,7 +335,7 @@ func (t *task) runGalaxy() error {
 		"--force",
 	}
 
-	cmd := exec.Command("ansible-galaxy", args...)//nolint: gas
+	cmd := exec.Command("ansible-galaxy", args...) //nolint: gas
 	cmd.Dir = util.Config.TmpPath + "/repository_" + strconv.Itoa(t.repository.ID)
 
 	gitSSHCommand := "ssh -o StrictHostKeyChecking=no -i " + t.repository.SSHKey.GetPath()
@@ -356,7 +356,7 @@ func (t *task) listPlaybookHosts() (string, error) {
 	}
 	args = append(args, "--list-hosts")
 
-	cmd := exec.Command("ansible-playbook", args...)//nolint: gas
+	cmd := exec.Command("ansible-playbook", args...) //nolint: gas
 	cmd.Dir = util.Config.TmpPath + "/repository_" + strconv.Itoa(t.repository.ID)
 	cmd.Env = t.envVars(util.Config.TmpPath, cmd.Dir, nil)
 
@@ -380,7 +380,7 @@ func (t *task) runPlaybook() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("ansible-playbook", args...)//nolint: gas
+	cmd := exec.Command("ansible-playbook", args...) //nolint: gas
 	cmd.Dir = util.Config.TmpPath + "/repository_" + strconv.Itoa(t.repository.ID)
 	cmd.Env = t.envVars(util.Config.TmpPath, cmd.Dir, nil)
 

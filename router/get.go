@@ -1,26 +1,33 @@
 package router
 
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/ansible-semaphore/semaphore/db"
-	"github.com/masterminds/squirrel"
+	"github.com/ansible-semaphore/semaphore/util"
 	"github.com/castawaylabs/mulekick"
 	"github.com/gorilla/context"
+	"github.com/masterminds/squirrel"
 	"net/http"
-	"github.com/ansible-semaphore/semaphore/util"
-	"github.com/Sirupsen/logrus"
+	"github.com/ansible-semaphore/semaphore/db/models"
 )
+
 type GetRequestOptions struct {
-	ContextKey string
-	GetObjectFunc func() interface{}
-	GetQuery func(ctx interface{}, options *GetRequestOptions, opts ...interface{}) (string, []interface{}, error)
+	Context  string
+	NewModel func() interface{}
+	//TODO - thought, we can abstract out the whole db layer instead of doing any queries here!
+	// just pass through the vars that you need to plug into the queries and go for it
+	// then reuse that stuff in dredd
+	GetQuery func(ctx interface{}, options *GetRequestOptions) (string, []interface{}, error)
 	Order string
-	Sort string
+	Sort  string
 }
 
-func GetRequestHandler(options *GetRequestOptions) func(w http.ResponseWriter, r *http.Request){
+func GetGetRoute(options *GetRequestOptions) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.Get(r, options.ContextKey).(db.Project)
-		obj := options.GetObjectFunc()
+		//TODO - sucks that this is hard coded to project, even if its the only thing we need
+		// defer the cast out to a function that is called like in the other funcs if pos
+		ctx := context.Get(r, options.Context).(models.Project)
+		obj := options.NewModel()
 
 		options.Sort = r.URL.Query().Get("sort")
 
@@ -40,27 +47,33 @@ func GetRequestHandler(options *GetRequestOptions) func(w http.ResponseWriter, r
 	}
 }
 
-func ProjectGetQueryGetter(id string, sortOptions []string) func(context interface{}, options *GetRequestOptions,  opts ...interface{}) (string, []interface{}, error) {
-	return ProjectGetCustomQueryGetter(id, sortOptions, func(id string, project *db.Project)squirrel.SelectBuilder{
-		return squirrel.Select("*").
-			From("project__"+id+" pe").
-			Where("project_id=?", project.ID)
-	})
+func ProjectGetQueryGetter(id string, sortOptions []string) func(context interface{}, options *GetRequestOptions) (string, []interface{}, error) {
+	return ProjectGetCustomQueryGetter(
+		id,
+		sortOptions,
+		func(typeID string, object interface{}) squirrel.SelectBuilder {
+			project := object.(*models.Project)
+			return squirrel.Select("*").
+				From("project__" + typeID + " t").
+				Where("project_id=?", project.ID)
+		})
 }
 
-func ProjectGetCustomQueryGetter(id string, sortOptions []string, qb func(id string, project *db.Project)squirrel.SelectBuilder) func(context interface{}, options *GetRequestOptions,  opts ...interface{}) (string, []interface{}, error) {
-	return func(context interface{}, options *GetRequestOptions, opts ...interface{}) (string, []interface{}, error) {
-		project := context.(db.Project)
-		q := qb(id, &project)
+// qb function should call its table t so that sorts will work here
+func ProjectGetCustomQueryGetter(typeID string, sortOptions []string, qb func(id string, project interface{}) squirrel.SelectBuilder) func(context interface{}, options *GetRequestOptions) (string, []interface{}, error) {
+	return func(context interface{}, options *GetRequestOptions) (string, []interface{}, error) {
+		project := context.(models.Project)
+		q := qb(typeID, &project)
 
-		if util.StringInSlice(options.Sort, sortOptions){
-			q = q.Where("pe.project_id=?", project.ID).
-				OrderBy("pe." + options.Sort + " " + options.Order)
+		//TODO - break out into own function that can be replaced
+		if util.StringInSlice(options.Sort, sortOptions) {
+			q = q.Where("t.project_id=?", project.ID).
+				OrderBy("t." + options.Sort + " " + options.Order)
 		} else {
-			q = q.Where("pe.project_id=?", project.ID).
-				OrderBy("pe.name " + options.Order)
+			q = q.Where("t.project_id=?", project.ID).
+				OrderBy("t.name " + options.Order)
 		}
 		return q.ToSql()
 	}
-}
 
+}

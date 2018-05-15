@@ -1,4 +1,4 @@
-package db
+package models
 
 import (
 	"time"
@@ -17,10 +17,10 @@ type User struct {
 	Alert    bool      `db:"alert" json:"alert"`
 }
 
-//FetchUser retrieves a user from the database by ID
-func FetchUser(userID int) (*User, error) {
-	var user User
-
-	err := Mysql.SelectOne(&user, "select * from user where id=?", userID)
-	return &user, err
-}
+//FetchUser retrieves a user from the database by OutputContext
+//func FetchUser(userID int) (*User, error) {
+//	var user User
+//
+//	err := Mysql.SelectOne(&user, "select * from user where id=?", userID)
+//	return &user, err
+//}
