@@ -10,7 +10,7 @@ import (
 //	log "github.com/Sirupsen/logrus"
 )
 //
-var dbAssets = packr.NewBox("./migrations")
+var dbAssets = packr.NewBox("./../migrations")
 //
 //// CheckExists queries the database to see if a migration table with this version id exists already
 //func (version *Version) CheckExists() (bool, error) {
