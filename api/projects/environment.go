@@ -103,15 +103,17 @@ func EnvironmentGetRequestHandler() func(w http.ResponseWriter, r *http.Request)
 //	mulekick.WriteJSON(w, http.StatusOK, env)
 //}
 
+
+//TODO - inject db
 func EnvironmentPutRequestHandler() func(w http.ResponseWriter, r *http.Request) {
-	return router.GetPutRoute(&router.PatchRequestOptions{
+	return router.GetPutRoute(&router.PutOptions{
 		Context: "environment",
 		NewModel: func() interface{} {
 			return new(models.Environment)
 		},
 		ProcessInput: environmentValidation,
 	},
-	)
+		db.Mysql)
 }
 
 // UpdateEnvironment updates an existing environment in the database
@@ -145,7 +147,7 @@ func EnvironmentCreateRequestHandler() func(w http.ResponseWriter, r *http.Reque
 		},
 		ProcessInput: environmentValidation,
 	},
-	)
+	db.Mysql)
 }
 
 func environmentValidation(context interface{}, model interface{}) error {
@@ -198,7 +200,7 @@ func environmentValidation(context interface{}, model interface{}) error {
 //}
 
 //func EnvironmentDeleteRequestHandler()func(w http.ResponseWriter, r *http.Request) {
-//	return router.GetPutRoute(&router.PatchRequestOptions{
+//	return router.GetPutRoute(&router.PutOptions{
 //		Context: "environment",
 //		NewModel: func() interface{} {
 //			return new(models.Environment)

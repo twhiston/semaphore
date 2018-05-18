@@ -2,12 +2,9 @@ package db
 
 type DbIface interface {
 	Connect() error
+	Init() error
 	Close()
-	GetHandler() HandlerIface
+	Insert(object ...interface{}) error
+	Update(object ...interface{}) (int64, error)
+	Channel() chan<- interface{}
 }
-
-type Db struct {
-	handler HandlerIface
-}
-
-var Connection DbIface

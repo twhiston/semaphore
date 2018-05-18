@@ -13,13 +13,16 @@ import (
 
 type MysqlDB struct {
 	gorp.DbMap
+	channel chan<- interface{}
 }
 // Mysql is the gorp database map
 // db.Connect must be called to set this up correctly
 //TODO - should not be instantiated like this
 var Mysql *MysqlDB
 
-
+func (d *MysqlDB)Channel() chan<- interface{}{
+	return d.channel
+}
 
 // Connect ensures that the db is connected and mapped properly with gorp
 func (d *MysqlDB)Connect() error {
@@ -50,25 +53,26 @@ func (d *MysqlDB)Connect() error {
 	return nil
 }
 
-// AddTableModels is called by main after initialization of the Mysql object to create or return an existing table map
-func AddTableModels() {
-	Mysql.AddTableWithName(models.APIToken{}, "user__token").SetKeys(false, "id")
-	Mysql.AddTableWithName(models.AccessKey{}, "access_key").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Environment{}, "project__environment").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Inventory{}, "project__inventory").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Project{}, "project").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Repository{}, "project__repository").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Task{}, "task").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.TaskOutput{}, "task__output").SetUniqueTogether("task_id", "time")
-	Mysql.AddTableWithName(models.Template{}, "project__template").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.User{}, "user").SetKeys(true, "id")
-	Mysql.AddTableWithName(models.Session{}, "session").SetKeys(true, "id")
+// Init is called by main after initialization of the Mysql object to create or return an existing table map
+func (d *MysqlDB) Init() error {
+	d.AddTableWithName(models.APIToken{}, "user__token").SetKeys(false, "id")
+	d.AddTableWithName(models.AccessKey{}, "access_key").SetKeys(true, "id")
+	d.AddTableWithName(models.Environment{}, "project__environment").SetKeys(true, "id")
+	d.AddTableWithName(models.Inventory{}, "project__inventory").SetKeys(true, "id")
+	d.AddTableWithName(models.Project{}, "project").SetKeys(true, "id")
+	d.AddTableWithName(models.Repository{}, "project__repository").SetKeys(true, "id")
+	d.AddTableWithName(models.Task{}, "task").SetKeys(true, "id")
+	d.AddTableWithName(models.TaskOutput{}, "task__output").SetUniqueTogether("task_id", "time")
+	d.AddTableWithName(models.Template{}, "project__template").SetKeys(true, "id")
+	d.AddTableWithName(models.User{}, "user").SetKeys(true, "id")
+	d.AddTableWithName(models.Session{}, "session").SetKeys(true, "id")
+	return nil
 }
 
 // Close closes the mysql connection and reports any errors
 // called from main with a defer
 func (d *MysqlDB)Close() {
-	err := Mysql.Db.Close()
+	err := d.Db.Close()
 	if err != nil {
 		log.Warn("Error closing database:" + err.Error())
 	}

@@ -117,7 +117,7 @@ func InventoryCreateRequestHandler() func(w http.ResponseWriter, r *http.Request
 		},
 		ProcessInput: inventoryValidation,
 	},
-	)
+		db.Mysql)
 }
 
 func inventoryValidation(context interface{}, model interface{}) error {
@@ -216,14 +216,14 @@ func IsValidInventoryPath(path string) bool {
 }
 
 func InventoryPutRequestHandler() func(w http.ResponseWriter, r *http.Request) {
-	return router.GetPutRoute(&router.PatchRequestOptions{
+	return router.GetPutRoute(&router.PutOptions{
 		Context: "inventory",
 		NewModel: func() interface{} {
 			return new(models.Inventory)
 		},
 		ProcessInput: inventoryValidation,
 	},
-	)
+		db.Mysql)
 }
 
 // UpdateInventory writes updated values to an existing inventory item in the database

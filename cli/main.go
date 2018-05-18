@@ -1,4 +1,4 @@
-package main
+	package main
 
 import (
 	"bufio"
@@ -41,17 +41,18 @@ func main() {
 	fmt.Printf("MySQL %v@%v %v\n", util.Config.MySQL.Username, util.Config.MySQL.Hostname, util.Config.MySQL.DbName)
 	fmt.Printf("Tmp Path (projects home) %v\n", util.Config.TmpPath)
 
-	if err := db.Connect(); err != nil {
+	if err := db.Mysql.Connect(); err != nil {
 		fmt.Println("\n Have you run semaphore -setup?")
 		panic(err)
 	}
 
-	db.AddTableModels()
-	defer db.Close()
+	db.Mysql.Init()
+	defer db.Mysql.Close()
 
-	if err := db.MigrateAll(); err != nil {
-		panic(err)
-	}
+	//TODO - restore migration
+	//if err := db.Mysql.MigrateAll(); err != nil {
+	//	panic(err)
+	//}
 	// legacy
 	if util.Migration {
 		fmt.Println("\n Connection migrations run on startup automatically")
@@ -135,16 +136,17 @@ func doSetup() int {
 	fmt.Println(" Pinging db..")
 	util.Config = setup
 
-	if err = db.Connect(); err != nil {
+	if err = db.Mysql.Connect(); err != nil {
 		fmt.Printf("\n Cannot connect to database!\n %v\n", err.Error())
 		os.Exit(1)
 	}
 
 	fmt.Println("\n Running Connection Migrations..")
-	if err = db.MigrateAll(); err != nil {
-		fmt.Printf("\n Database migrations failed!\n %v\n", err.Error())
-		os.Exit(1)
-	}
+	//TODO - put this back
+	//if err = db.Mysql.MigrateAll(); err != nil {
+	//	fmt.Printf("\n Database migrations failed!\n %v\n", err.Error())
+	//	os.Exit(1)
+	//}
 
 	stdin := bufio.NewReader(os.Stdin)
 

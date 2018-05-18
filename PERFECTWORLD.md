@@ -1,7 +1,16 @@
 # Todays TODO and shiz
 
 * how to manage deletes? do them last?
+* write tests that actually write down some data to test database interaction
+* dont pass in db or use it globally, make a channel
 
+----------
+The Why?
+
+* semaphore is an app not a lib, structure it to reflect that (cobra in root)
+* write as little code as possible
+* better test coverage
+* reduce error surface area to make it easier to manage
 
 ----------
 
