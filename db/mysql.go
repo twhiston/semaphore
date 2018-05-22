@@ -13,16 +13,11 @@ import (
 
 type MysqlDB struct {
 	gorp.DbMap
-	channel chan<- interface{}
 }
 // Mysql is the gorp database map
 // db.Connect must be called to set this up correctly
 //TODO - should not be instantiated like this
 var Mysql *MysqlDB
-
-func (d *MysqlDB)Channel() chan<- interface{}{
-	return d.channel
-}
 
 // Connect ensures that the db is connected and mapped properly with gorp
 func (d *MysqlDB)Connect() error {
@@ -46,6 +41,8 @@ func (d *MysqlDB)Connect() error {
 		}
 	}
 
+	dc := new (MysqlDB)
+	dc.Db = db
 	d.Db = db
 	d.Dialect = gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"}
 	//Mysql = &MysqlDB{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"}}

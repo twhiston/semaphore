@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package api;
+
+import "google/api/annotations.proto";
+
+// The greeting service definition.
+service EventHandler {
+    rpc GetEvent (EventID) returns (Event) {
+        option (google.api.http) = {
+            post: "/v1/echo"
+            body: "*"
+        };}
+    rpc PostEvent (Event) returns (EventID){}
+}
+
+//
+message EventID {
+    string id = 1;
+}
+
+// An Event
+message Event {
+	int32 ProjectID = 1;
+	int32 ObjectID = 2;
+	string ObjectType = 3;
+	string Description = 4;
+	int32 Created = 5;
+	string ObjectName  = 6;
+	string ProjectName = 7;
+}

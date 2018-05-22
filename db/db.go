@@ -6,5 +6,4 @@ type DbIface interface {
 	Close()
 	Insert(object ...interface{}) error
 	Update(object ...interface{}) (int64, error)
-	Channel() chan<- interface{}
 }

@@ -171,10 +171,10 @@ func loadConfig() {
 }
 
 func dbConnect() {
-	if err := db.Connect(); err != nil {
+	if err := db.Mysql.Connect(); err != nil {
 		panic(err)
 	}
-	db.AddTableModels()
+	db.Mysql.Init()
 }
 
 func stringInSlice(a string, list []string) (int, bool) {

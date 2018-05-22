@@ -1,0 +1,10 @@
+version: "2"
+tasks:
+  gen:proto:
+    cmds:
+      - /home/developer/bin/protoc -I/home/developer/Code/golang/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis -I/home/developer/bin/include -I. --go_out=plugins=grpc:.  event.proto
+
+
+  gen:gateway:
+    cmds:
+      - /home/developer/bin/protoc -I/home/developer/Code/golang/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis -I/home/developer/bin/include -I. --grpc-gateway_out=logtostderr=true:. --go_out=plugins=grpc:. event.proto

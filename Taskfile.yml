@@ -298,6 +298,10 @@ tasks:
     cmds:
       - docker push {{ .docker_namespace }}/{{ .docker_image }}:{{ .tag }}
 
+  docker:dredd:
+    cmds:
+      - task: dc:up
+
   # templated command to reduce code duplication
   docker:
     vars:
