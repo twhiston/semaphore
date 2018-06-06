@@ -40,3 +40,12 @@ Cannot be pure template as requires custom functions for selects and we need to 
 GOLDEN PATH
 
 start refactoring the various parts and see what could be broken out and how
+
+DB ACTIONS
+
+The db itself has an insert function, by which you can add any model.
+If we want a truely flexible model we need to abstract the insert etc... stuff out to the models themselves
+currently it lives directly in the db.
+If it is in the model then the model would take the db instance and run the insert
+Do we REALLY need this?
+On the plus side we want to push out all the stuff about queries etc.... to the model level so all the api stuff is totally decoupled

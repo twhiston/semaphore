@@ -36,6 +36,7 @@ func GetGetRoute(options *GetRequestOptions) func(w http.ResponseWriter, r *http
 			options.Order = asc
 		}
 
+		//TODO - abstract as in create router file
 		query, args, err := options.GetQuery(ctx, options)
 		util.LogErrorWithFields(err, logrus.Fields{"context": ctx, "query": query, "args": args})
 

@@ -7,7 +7,6 @@ import (
 	_ "github.com/go-sql-driver/mysql" // imports mysql driver
 	"gopkg.in/gorp.v1"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/ansible-semaphore/semaphore/db/models"
 )
 
@@ -68,11 +67,8 @@ func (d *MysqlDB) Init() error {
 
 // Close closes the mysql connection and reports any errors
 // called from main with a defer
-func (d *MysqlDB)Close() {
-	err := d.Db.Close()
-	if err != nil {
-		log.Warn("Error closing database:" + err.Error())
-	}
+func (d *MysqlDB)Close() error {
+	return d.Db.Close()
 }
 
 func createDb() error {

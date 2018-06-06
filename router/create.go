@@ -24,14 +24,14 @@ func GetCreateRoute(options *CreateOptions, database db.DbIface) func(w http.Res
 		}
 		if util.LogError(options.ProcessInput(ctx, model)) {
 			mulekick.WriteJSON(w, http.StatusBadRequest, map[string]string{
-				"error": "invalid json",
+				errorKey: "invalid json",
 			})
 			return
 		}
 		if util.LogError(database.Insert(model)) {
 			//TODO - should we return this? technically you could probe for an error with this
 			mulekick.WriteJSON(w, http.StatusInternalServerError, map[string]string{
-				"error": "check logs",
+				errorKey: "check logs",
 			})
 			return
 		}

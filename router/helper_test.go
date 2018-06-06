@@ -41,5 +41,6 @@ func (d *TestDb) Connect() error {
 func (d *TestDb) Init() error {
 	return nil
 }
-func (d *TestDb) Close() {
+func (d *TestDb) Close() error{
+	return nil
 }
