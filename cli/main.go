@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/handlers"
 	"golang.org/x/crypto/bcrypt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -64,6 +65,7 @@ func main() {
 	var router http.Handler = api.Route()
 	router = handlers.ProxyHeaders(router)
 	http.Handle("/", router)
+	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe(util.Config.Port, nil)
 	if err != nil {
 		log.Panic(err)
